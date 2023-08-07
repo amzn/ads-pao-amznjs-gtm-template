@@ -1,11 +1,7 @@
-## My Project
+## Amazon Advertising Tag - GTM Template
 
-TODO: Fill this README out!
+This repository hosts the Google Tag Manager template for Amazon Ad Tag.
 
-Be sure to:
-
-* Change the title in this README
-* Edit your repository description on GitHub
 
 ## Security
 
