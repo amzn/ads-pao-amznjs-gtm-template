@@ -1,4 +1,4 @@
-﻿___TERMS_OF_SERVICE___
+___TERMS_OF_SERVICE___
 
 By creating or modifying this file you agree to Google Tag Manager's Community
 Template Gallery Developer Terms of Service available at
@@ -13,7 +13,7 @@ ___INFO___
   "id": "cvt_temp_public_id",
   "version": 1,
   "securityGroups": [],
-  "displayName": "Amazon Advertising Tag",
+  "displayName": "Amazon Advertising Tag - AAT3.1",
   "brand": {
     "id": "brand_dummy",
     "displayName": "Amazon Advertising",
@@ -463,12 +463,11 @@ const buildGdpr = (gpdr, gdprPd, gdprConsent) => {
 const gdprAttributes = buildGdpr(gdpr, gdprPd, gdprConsent);
 
 let amzn = copyFromWindow('amzn');
-if (!amzn) {
-  var amznq = createArgumentsQueue('amzn', 'amzn.q');
-  amzn = (a,b,c,d) => {
-    amznq([a,b,c,d]);
-  };
-}
+let amznq = createArgumentsQueue('amzn', 'amzn.q');
+amzn = (a,b,c,d) => {
+  amznq([a,b,c,d]);
+};
+
 
 let tokenConfig = {
   email: '',
@@ -503,7 +502,7 @@ tagIds.forEach(item => amzn("addTag", item));
 amzn('addtcfv2', gdprAttributes);
 amzn('trackEvent', eventName, finalAttributes);
 
-injectScript('https://d2sg48r5g91mpb.cloudfront.net/amzn.js', data.gtmOnSuccess, data.gtmOnFailure, 'amznScript');
+injectScript('https://c.amazon-adsystem.com/aat/amzn.js', data.gtmOnSuccess, data.gtmOnFailure, 'amznScript');
 
 
 ___WEB_PERMISSIONS___
@@ -644,11 +643,7 @@ ___WEB_PERMISSIONS___
             "listItem": [
               {
                 "type": 1,
-                "string": "https://c.amazon-adsystem.com/aat/amzn.js,"
-              },
-              {
-                "type": 1,
-                "string": "https://d2sg48r5g91mpb.cloudfront.net/amzn.js"
+                "string": "https://c.amazon-adsystem.com/aat/amzn.js"
               }
             ]
           }
