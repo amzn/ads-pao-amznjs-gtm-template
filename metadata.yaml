@@ -1,6 +1,8 @@
 homepage: "https://www.advertising.amazon.com"
 documentation: "https://advertising.amazon.com/dsp/help#/"
 versions:
+  - sha: 7d6d03cbe40866b8be39b2052b5d4265046e9e6d
+    changeNotes: bug fix to allow more than 1 event to be fired on page.
   - sha: f5287018839c6ae37772902bb409cc4c518e2f7d
     changeNotes: Initial release.
 
