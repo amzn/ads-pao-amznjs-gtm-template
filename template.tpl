@@ -13,7 +13,7 @@ ___INFO___
   "id": "cvt_temp_public_id",
   "version": 1,
   "securityGroups": [],
-  "displayName": "Amazon Advertising Tag - AAT3.1",
+  "displayName": "Amazon Advertising Tag - AAT3.2",
   "brand": {
     "id": "brand_dummy",
     "displayName": "Amazon Advertising",
@@ -48,7 +48,13 @@ ___TEMPLATE_PARAMETERS___
         "valueHint": "Tag Id from Amazon DSP"
       }
     ],
-    "newRowButtonText": "Add Tag"
+    "newRowButtonText": "Add Tag",
+    "valueValidators": [
+      {
+        "type": "NON_EMPTY"
+      }
+    ],
+    "alwaysInSummary": true
   },
   {
     "type": "RADIO",
@@ -110,7 +116,7 @@ ___TEMPLATE_PARAMETERS___
               }
             ],
             "simpleValueType": true,
-            "defaultValue": "Page view"
+            "defaultValue": "PageView"
           }
         ]
       },
@@ -122,7 +128,8 @@ ___TEMPLATE_PARAMETERS___
             "type": "TEXT",
             "name": "customEventName",
             "displayName": "",
-            "simpleValueType": true
+            "simpleValueType": true,
+            "defaultValue": "default"
           }
         ]
       }
@@ -143,7 +150,8 @@ ___TEMPLATE_PARAMETERS___
         "displayValue": "Europe"
       }
     ],
-    "simpleValueType": true
+    "simpleValueType": true,
+    "defaultValue": "NA"
   },
   {
     "type": "CHECKBOX",
@@ -427,11 +435,11 @@ ___SANDBOXED_JS_FOR_WEB_TEMPLATE___
 const makeTableMap = require('makeTableMap');
 const createArgumentsQueue = require('createArgumentsQueue');
 const injectScript = require('injectScript');
-const copyFromWindow = require('copyFromWindow');
-
 const log = require('logToConsole');
-log('data =', data);
+const copyFromWindow = require('copyFromWindow');
+const setInWindow = require('setInWindow');
 
+// Helper methods
 const mergeObj = (obj, obj2) => {
   for (let key in obj2) {
     if (obj2.hasOwnProperty(key)) {
@@ -441,42 +449,57 @@ const mergeObj = (obj, obj2) => {
   return obj;
 };
 
-const tagIds = data.tagIds.map(function (item) { return item.TagIds; });
-const eventName = data.eventName === 'standard' ? data.standardEventName : (data.eventName === 'custom' ? data.customEventName : "default");
-const region = data.tagRegion == null ? 'NA' : data.tagRegion;
+const fail = msg => {
+  log(msg);
+  data.gtmOnFailure();
+};
+
+
+// Field processing
+const tagIds = data.tagIds.map(item => item.TagIds).filter( item => item );
+if (tagIds.length === 0) {
+  return fail("No Amazon Ad Tag IDs configured");
+}
+
+let eventName = data.standardEventName;
+if (data.eventName === "custom") {
+  eventName = data.customEventName;
+}
+
+if (!eventName) {
+  return fail("Event Name is not defined");
+}
+
+const region = data.tagRegion;
 const defaultAttributes = data.defaultAttributes ? makeTableMap(data.defaultAttributes, 'Attribute', 'value') : {};
 const customAttributes = data.customAttributes ? makeTableMap(data.customAttributes, 'Attribute', 'value') : {};
 const finalAttributes = mergeObj(defaultAttributes, customAttributes);
-const gdpr = data.includeTcf ? (data.gdpr == -1 ? null : data.gdpr) : null;
-const gdprPd = data.includeTcf ? (data.gdprPd == -1 ? null : data.gdprPd) : null;
-const gdprConsent = data.includeTcf ? (data.gdprConsent ? data.gdprConsent : null) : null;
-const ttl = data.includeTcf ? (data.ttl ? data.ttl : null) : null;
 
-const buildGdpr = (gpdr, gdprPd, gdprConsent) => {
-  let rsp = {};
-  if (gdpr != null) {rsp.gdpr = gdpr;}
-  if (gdprPd != null) {rsp.gdpr_pd = gdprPd;}
-  if (gdprConsent != null) {rsp.gdpr_consent = gdprConsent;}
-  return rsp;
-};
+for (const key in finalAttributes) {
+  if (!key) {
+    return fail("Attribute is not defined");
+  }
+}
 
-const gdprAttributes = buildGdpr(gdpr, gdprPd, gdprConsent);
+const gdprAttributes = {};
+let ttl = null;
 
-let amzn = copyFromWindow('amzn');
-let amznq = createArgumentsQueue('amzn', 'amzn.q');
-amzn = (a,b,c,d) => {
-  amznq([a,b,c,d]);
-};
+if (data.includeTcf) {
+  if (data.gdpr !== -1) gdprAttributes.gdpr = data.gdpr;
+  if (data.gdprPd !== -1) gdprAttributes.gdprPd = data.gdprPd;
+  if (data.gdprConsent) gdprAttributes.gdprConsent = data.gdprConsent;
+  if (data.ttl) ttl = data.ttl;
+}
 
-
-let tokenConfig = {
+const tokenConfig = {
   email: '',
   phonenumber: '',
   gdpr: { enabled: false, consent: '',},
   ttl: 6000,
 };
+
 if (data.advancedMatchingList) {
-  data.advancedMatchingList.forEach(function (e) {
+  data.advancedMatchingList.forEach((e) => {
     if (e.paramName === "email" && e.paramValue.length > 0) {
       tokenConfig.email = e.paramValue;
     }
@@ -484,24 +507,49 @@ if (data.advancedMatchingList) {
       tokenConfig.phonenumber = e.paramValue;
     }
   });
-  if (gdpr) {
-    tokenConfig.gdpr.enabled = !!gdpr;
+  if (gdprAttributes.gdpr) {
+    tokenConfig.gdpr.enabled = !!gdprAttributes.gdpr;
   }
-  if (gdprConsent) {
-    tokenConfig.gdpr.consent = gdprConsent;
+  if (gdprAttributes.gdprConsent) {
+    tokenConfig.gdpr.consent = gdprAttributes.gdprConsent;
   }
   if (ttl) {
     tokenConfig.ttl = ttl;
   }
   log("token config =", tokenConfig);
-  amzn('setUserData', tokenConfig);
 }
 
-amzn('setRegion', region);
-tagIds.forEach(item => amzn("addTag", item));
-amzn('addtcfv2', gdprAttributes);
-amzn('trackEvent', eventName, finalAttributes);
+// Define amzn fn in window
+const getAmzn = () => {
+  const amzn = copyFromWindow('amzn');
+  if (amzn && !amzn.q) return amzn;
 
+  // Until the full library is loaded we allow calling amzn by queuing all
+  // calls to it. This queue is then processed when the library is loaded.
+  const amznq = createArgumentsQueue('amzn', 'amzn.q');
+
+  const overrideAmznFn = (a, b, c, d) => amznq([a, b, c, d]);
+  return overrideAmznFn;
+};
+
+// track events once amznjs script is loaded
+const trackEvents = () => {
+  const amzn = getAmzn();
+  if (!amzn) {
+     return fail("Amazon Ad Tag not defined in browser window");
+  }
+
+  if (data.advancedMatchingList) {
+     amzn('setUserData', tokenConfig);
+  }
+
+  amzn('setRegion', region);
+  tagIds.forEach(item => amzn("addTag", item));
+  amzn('addtcfv2', gdprAttributes);
+  amzn('trackEvent', eventName, finalAttributes);
+};
+
+trackEvents();
 injectScript('https://c.amazon-adsystem.com/aat/amzn.js', data.gtmOnSuccess, data.gtmOnFailure, 'amznScript');
 
 
@@ -643,7 +691,7 @@ ___WEB_PERMISSIONS___
             "listItem": [
               {
                 "type": 1,
-                "string": "https://c.amazon-adsystem.com/aat/amzn.js"
+                "string": "https://c.amazon-adsystem.com/"
               }
             ]
           }
