@@ -196,7 +196,12 @@ ___TEMPLATE_PARAMETERS___
             "defaultValue": "",
             "displayName": "Parameter value",
             "name": "paramValue",
-            "type": "TEXT"
+            "type": "TEXT",
+            "valueValidators": [
+              {
+                "type": "NON_EMPTY"
+              }
+            ]
           }
         ],
         "valueValidators": [
@@ -442,7 +447,6 @@ const createArgumentsQueue = require('createArgumentsQueue');
 const injectScript = require('injectScript');
 const log = require('logToConsole');
 const copyFromWindow = require('copyFromWindow');
-const setInWindow = require('setInWindow');
 
 // Helper methods
 const mergeObj = (obj, obj2) => {
@@ -543,16 +547,22 @@ const trackEvents = () => {
   if (!amzn) {
      return fail("Amazon Ad Tag not defined in browser window");
   }
-
-  if (data.advancedMatchingList) {
-     amzn('setUserData', tokenConfig);
+   if (data.advancedMatchingList) {
+      amzn('setUserData', tokenConfig);
   }
+  const logToConsole = require('logToConsole');
+
+  for (let i = 0; i < 500; i++) {
+  logToConsole('Logged asynchronously');
+}
+  
 
   amzn('setRegion', region);
   tagIds.forEach(item => amzn("addTag", item));
   amzn('addtcfv2', gdprAttributes);
   amzn('trackEvent', eventName, finalAttributes);
 };
+
 
 trackEvents();
 injectScript('https://c.amazon-adsystem.com/aat/amzn.js', data.gtmOnSuccess, data.gtmOnFailure, 'amznScript');
