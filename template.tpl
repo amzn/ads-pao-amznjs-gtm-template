@@ -448,6 +448,7 @@ const createArgumentsQueue = require('createArgumentsQueue');
 const injectScript = require('injectScript');
 const log = require('logToConsole');
 const copyFromWindow = require('copyFromWindow');
+const setInWindow = require('setInWindow');
 
 // Helper methods
 const mergeObj = (obj, obj2) => {
@@ -510,6 +511,7 @@ const tokenConfig = {
 
 if (data.advancedMatchingList) {
   data.advancedMatchingList.forEach((e) => {
+    if (!e.paramName || !e.paramValue) return;
     if (e.paramName === "email" && e.paramValue.length > 0) {
       tokenConfig.email = e.paramValue;
     }
@@ -548,8 +550,9 @@ const trackEvents = () => {
   if (!amzn) {
      return fail("Amazon Ad Tag not defined in browser window");
   }
-   if (data.advancedMatchingList) {
-      amzn('setUserData', tokenConfig);
+
+  if (data.advancedMatchingList && tokenConfig.email !== '') {
+     amzn('setUserData', tokenConfig);
   }
 
   amzn('setRegion', region);
@@ -557,7 +560,6 @@ const trackEvents = () => {
   amzn('addtcfv2', gdprAttributes);
   amzn('trackEvent', eventName, finalAttributes);
 };
-
 
 trackEvents();
 injectScript('https://c.amazon-adsystem.com/aat/amzn.js', data.gtmOnSuccess, data.gtmOnFailure, 'amznScript');
