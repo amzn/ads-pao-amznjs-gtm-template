@@ -551,7 +551,7 @@ const trackEvents = () => {
      return fail("Amazon Ad Tag not defined in browser window");
   }
 
-  if (data.advancedMatchingList) {
+  if (data.advancedMatchingList && (tokenConfig.email !== '' || tokenConfig.phone !== '')) {
      amzn('setUserData', tokenConfig);
   }
 
