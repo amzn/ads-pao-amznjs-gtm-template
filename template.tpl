@@ -190,7 +190,8 @@ ___TEMPLATE_PARAMETERS___
                 "displayValue": "Phone Number"
               }
             ],
-            "valueValidators": []
+            "valueValidators": [],
+            "isUnique": true
           },
           {
             "defaultValue": "",
@@ -550,12 +551,6 @@ const trackEvents = () => {
    if (data.advancedMatchingList) {
       amzn('setUserData', tokenConfig);
   }
-  const logToConsole = require('logToConsole');
-
-  for (let i = 0; i < 500; i++) {
-  logToConsole('Logged asynchronously');
-}
-  
 
   amzn('setRegion', region);
   tagIds.forEach(item => amzn("addTag", item));
