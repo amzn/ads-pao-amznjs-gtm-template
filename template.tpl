@@ -449,6 +449,7 @@ const injectScript = require('injectScript');
 const log = require('logToConsole');
 const copyFromWindow = require('copyFromWindow');
 const setInWindow = require('setInWindow');
+const makeString = require('makeString');
 
 // Helper methods
 const mergeObj = (obj, obj2) => {
@@ -511,14 +512,20 @@ const tokenConfig = {
 
 if (data.advancedMatchingList) {
   data.advancedMatchingList.forEach((e) => {
-    if (!e.paramName || !e.paramValue) return;
-    if (e.paramName === "email" && e.paramValue.length > 0) {
+    if (!e.paramName || !e.paramValue) {
+      return;
+    }
+      
+    const paramVal = makeString(e.paramValue);
+    
+    if (e.paramName === "email" && paramVal.length > 0) {
       tokenConfig.email = e.paramValue;
     }
-    if (e.paramName === "phone" && e.paramValue.length > 0) {
+    if (e.paramName === "phone" && paramVal.length > 0) {
       tokenConfig.phonenumber = e.paramValue;
     }
   });
+  
   if (gdprAttributes.gdpr) {
     tokenConfig.gdpr.enabled = !!gdprAttributes.gdpr;
   }
