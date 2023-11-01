@@ -543,7 +543,7 @@ if (data.advancedMatchingList) {
       tokenConfig.phonenumber = paramVal;
     }*/
   });
-
+  
   if (gdprAttributes.gdpr) {
     tokenConfig.gdpr.enabled = !!gdprAttributes.gdpr;
   }
