@@ -1,6 +1,8 @@
 homepage: "https://advertising.amazon.com"
 documentation: "https://advertising.amazon.com/dsp/help#/"
 versions:
+  - sha: 88aff3cdebde5d129f1e0007764bd2c6f365b509
+    changeNotes: Fixed bugs in some fields, added unit tests, removed phone support temporarily, added new logo and title to template
   - sha: 43f968c9a29ec1cfdcd79bc15333b0d2dbc26193
     changeNotes: Addressed Github issues regarding permissions, tag id check, and homepage, and added logo.
   - sha: 39413210418692b92852b9f962ad500923e68e4d
