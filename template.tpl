@@ -24,7 +24,7 @@ ___INFO___
     "ATTRIBUTION",
     "CONVERSIONS"
   ],
-  "description": "Amazon Advertising Tag template - version 3.3",
+  "description": "Amazon Advertising Tag template - version 3.4",
   "containerContexts": [
     "WEB"
   ]
@@ -184,6 +184,10 @@ ___TEMPLATE_PARAMETERS___
               {
                 "value": "email",
                 "displayValue": "Email"
+              },
+              {
+                "value": "phone",
+                "displayValue": "Phone Number"
               }
             ],
             "valueValidators": [],
@@ -519,7 +523,7 @@ if (data.includeTcf) {
 
 const tokenConfig = {
   email: '',
-  //phonenumber: '',
+  phonenumber: '',
   gdpr: { enabled: false, consent: '',},
   ttl: 9600,
 };
@@ -539,9 +543,9 @@ if (data.advancedMatchingList) {
       // if token config email is already set, we don't want to
       tokenConfig.email = paramVal;
     }
-    /*if (e.paramName === "phone" && paramVal.length > 0) {
+    if (e.paramName === "phone" && paramVal.length > 0) {
       tokenConfig.phonenumber = paramVal;
-    }*/
+    }
   });
 
   if (gdprAttributes.gdpr) {
@@ -550,11 +554,11 @@ if (data.advancedMatchingList) {
   if (gdprAttributes.gdprConsent) {
     tokenConfig.gdpr.consent = gdprAttributes.gdprConsent;
   }
-  
+
   if (tokenConfig.gdpr.enabled && !tokenConfig.gdpr.consent) {
     return fail("GDPR consent string must be set if GDPR enabled");
   }
-  
+
   if (ttl) {
     tokenConfig.ttl = ttl;
   }
@@ -581,7 +585,7 @@ const trackEvents = () => {
      return fail("Amazon Ad Tag not defined in browser window");
   }
 
-  if (data.advancedMatchingList && ((tokenConfig.email !== '') /*|| (tokenConfig.phonenumber !== '')*/)) {
+  if (data.advancedMatchingList && ((tokenConfig.email !== '') || (tokenConfig.phonenumber !== ''))) {
      amzn('setUserData', tokenConfig);
   }
 
@@ -848,8 +852,8 @@ scenarios:
 - name: with tcf - advancedMatching = true and ttl positive value
   code: "mockData.advancedMatchingList = [ { 'paramName': 'email', 'paramValue': 'test@test.com'\
     \ }];\n\nmockData.ttl = 10;\nrunCode(mockData);\n\nassertThat(amznCalls.length).isEqualTo(5);\n\
-    \nconst tokenConfig = {\n  email: 'test@test.com',\n  gdpr: { enabled: false,\
-    \ consent: '',},\n  ttl: 10,\n};\n\nassertThat(amznCalls[0]).isEqualTo(['setUserData',\
+    \nconst tokenConfig = {\n  email: 'test@test.com',\n  phonenumber: '',\n  gdpr:\
+    \ { enabled: false, consent: '',},\n  ttl: 10,\n};\n\nassertThat(amznCalls[0]).isEqualTo(['setUserData',\
     \ tokenConfig]);\nassertThat(amznCalls[1]).isEqualTo(['setRegion', region]);\n\
     assertThat(amznCalls[2]).isEqualTo(['addTag', tag1]);\nassertThat(amznCalls[3]).isEqualTo(['addtcfv2',\
     \ {}]);\nassertThat(amznCalls[4]).isEqualTo(['trackEvent', eventName, { gtmVersion:\
@@ -858,8 +862,8 @@ scenarios:
     default ttl
   code: "mockData.advancedMatchingList = [ { 'paramName': 'email', 'paramValue': 'test@test.com'\
     \ }];\n\nmockData.ttl = -10;\nrunCode(mockData);\n\nassertThat(amznCalls.length).isEqualTo(5);\n\
-    \nconst tokenConfig = {\n  email: 'test@test.com',\n  gdpr: { enabled: false,\
-    \ consent: '',},\n  ttl: 9600,\n};\n\nassertThat(amznCalls[0]).isEqualTo(['setUserData',\
+    \nconst tokenConfig = {\n  email: 'test@test.com',\n  phonenumber: '',\n  gdpr:\
+    \ { enabled: false, consent: '',},\n  ttl: 9600,\n};\n\nassertThat(amznCalls[0]).isEqualTo(['setUserData',\
     \ tokenConfig]);\nassertThat(amznCalls[1]).isEqualTo(['setRegion', region]);\n\
     assertThat(amznCalls[2]).isEqualTo(['addTag', tag1]);\nassertThat(amznCalls[3]).isEqualTo(['addtcfv2',\
     \ {}]);\nassertThat(amznCalls[4]).isEqualTo(['trackEvent', eventName, { gtmVersion:\
@@ -868,8 +872,8 @@ scenarios:
     default ttl
   code: "mockData.advancedMatchingList = [ { 'paramName': 'email', 'paramValue': 'test@test.com'\
     \ }];\n\nmockData.ttl = \"random\";\nrunCode(mockData);\n\nassertThat(amznCalls.length).isEqualTo(5);\n\
-    \nconst tokenConfig = {\n  email: 'test@test.com',\n  gdpr: { enabled: false,\
-    \ consent: '',},\n  ttl: 9600,\n};\n\nassertThat(amznCalls[0]).isEqualTo(['setUserData',\
+    \nconst tokenConfig = {\n  email: 'test@test.com',\n  phonenumber: '',\n  gdpr:\
+    \ { enabled: false, consent: '',},\n  ttl: 9600,\n};\n\nassertThat(amznCalls[0]).isEqualTo(['setUserData',\
     \ tokenConfig]);\nassertThat(amznCalls[1]).isEqualTo(['setRegion', region]);\n\
     assertThat(amznCalls[2]).isEqualTo(['addTag', tag1]);\nassertThat(amznCalls[3]).isEqualTo(['addtcfv2',\
     \ {}]);\nassertThat(amznCalls[4]).isEqualTo(['trackEvent', eventName, { gtmVersion:\
@@ -877,15 +881,15 @@ scenarios:
 - name: Test Advanced Matching with Email
   code: "mockData.advancedMatchingList = [{\"paramName\":\"email\",\"paramValue\"\
     :\"jj\"}];\n\nrunCode(mockData);\n\nassertThat(amznCalls.length).isEqualTo(5);\n\
-    \nconst tokenConfig = {\n  email: 'jj',\n  gdpr: { enabled: false, consent: '',},\n\
-    \  ttl: 9600,\n};\n\nassertThat(amznCalls[0]).isEqualTo(['setUserData', tokenConfig]);\n\
-    assertThat(amznCalls[1]).isEqualTo(['setRegion', region]);\nassertThat(amznCalls[2]).isEqualTo(['addTag',\
-    \ tag1]);\nassertThat(amznCalls[3]).isEqualTo(['addtcfv2', {}]);\nassertThat(amznCalls[4]).isEqualTo(['trackEvent',\
-    \ eventName, { gtmVersion: version }]);\nassertApi('gtmOnSuccess').wasCalled();\n\
-    \  \namznCalls = [];"
+    \nconst tokenConfig = {\n  email: 'jj',\n  phonenumber: '',\n  gdpr: { enabled:\
+    \ false, consent: '',},\n  ttl: 9600,\n};\n\nassertThat(amznCalls[0]).isEqualTo(['setUserData',\
+    \ tokenConfig]);\nassertThat(amznCalls[1]).isEqualTo(['setRegion', region]);\n\
+    assertThat(amznCalls[2]).isEqualTo(['addTag', tag1]);\nassertThat(amznCalls[3]).isEqualTo(['addtcfv2',\
+    \ {}]);\nassertThat(amznCalls[4]).isEqualTo(['trackEvent', eventName, { gtmVersion:\
+    \ version }]);\nassertApi('gtmOnSuccess').wasCalled();\n  \namznCalls = [];"
 - name: Test Advanced Matching with Phone
   code: |
-    /*mockData.advancedMatchingList = [{"paramName":"phone","paramValue":"kk"}];
+    mockData.advancedMatchingList = [{"paramName":"phone","paramValue":"kk"}];
 
 
     runCode(mockData);
@@ -905,11 +909,11 @@ scenarios:
     assertThat(amznCalls[3]).isEqualTo(['addtcfv2', {}]);
     assertThat(amznCalls[4]).isEqualTo(['trackEvent', eventName, { gtmVersion: version }]);
     assertApi('gtmOnSuccess').wasCalled();
-    */
+
     amznCalls = [];
 - name: Test Advanced Matching with Phone as number
   code: |
-    /*mockData.advancedMatchingList = [{"paramName":"phone","paramValue":22}];
+    mockData.advancedMatchingList = [{"paramName":"phone","paramValue":22}];
 
 
     runCode(mockData);
@@ -929,20 +933,20 @@ scenarios:
     assertThat(amznCalls[3]).isEqualTo(['addtcfv2', {}]);
     assertThat(amznCalls[4]).isEqualTo(['trackEvent', eventName, { gtmVersion: version }]);
     assertApi('gtmOnSuccess').wasCalled();
-    */
+
     amznCalls = [];
 - name: Test Advanced Matching with Email as number
   code: "mockData.advancedMatchingList = [{\"paramName\":\"email\",\"paramValue\"\
     : 33}];\n\n\nrunCode(mockData);\n\nassertThat(amznCalls.length).isEqualTo(5);\n\
-    \nconst tokenConfig = {\n  email: '33',\n  gdpr: { enabled: false, consent: '',},\n\
-    \  ttl: 9600,\n};\n\nassertThat(amznCalls[0]).isEqualTo(['setUserData', tokenConfig]);\n\
-    assertThat(amznCalls[1]).isEqualTo(['setRegion', region]);\nassertThat(amznCalls[2]).isEqualTo(['addTag',\
-    \ tag1]);\nassertThat(amznCalls[3]).isEqualTo(['addtcfv2', {}]);\nassertThat(amznCalls[4]).isEqualTo(['trackEvent',\
-    \ eventName, { gtmVersion: version }]);\nassertApi('gtmOnSuccess').wasCalled();\n\
-    \  \namznCalls = [];\n"
+    \nconst tokenConfig = {\n  email: '33',\n  phonenumber: '',\n  gdpr: { enabled:\
+    \ false, consent: '',},\n  ttl: 9600,\n};\n\nassertThat(amznCalls[0]).isEqualTo(['setUserData',\
+    \ tokenConfig]);\nassertThat(amznCalls[1]).isEqualTo(['setRegion', region]);\n\
+    assertThat(amznCalls[2]).isEqualTo(['addTag', tag1]);\nassertThat(amznCalls[3]).isEqualTo(['addtcfv2',\
+    \ {}]);\nassertThat(amznCalls[4]).isEqualTo(['trackEvent', eventName, { gtmVersion:\
+    \ version }]);\nassertApi('gtmOnSuccess').wasCalled();\n  \namznCalls = [];\n"
 - name: Test Advanced Matching with Email and Phone
   code: |
-    /*mockData.advancedMatchingList = [{"paramName":"email","paramValue": "aa"},{"paramName":"phone","paramValue":"kk"}];
+    mockData.advancedMatchingList = [{"paramName":"email","paramValue": "aa"},{"paramName":"phone","paramValue":"kk"}];
 
 
     runCode(mockData);
@@ -962,10 +966,10 @@ scenarios:
     assertThat(amznCalls[3]).isEqualTo(['addtcfv2', {}]);
     assertThat(amznCalls[4]).isEqualTo(['trackEvent', eventName, { gtmVersion: version }]);
     assertApi('gtmOnSuccess').wasCalled();
-      */
+
     amznCalls = [];
 - name: Test Advanced Matching with Email and null Phone
-  code: "/*mockData.advancedMatchingList = [{\"paramName\":\"email\",\"paramValue\"\
+  code: "mockData.advancedMatchingList = [{\"paramName\":\"email\",\"paramValue\"\
     : \"aa\"},{\"paramName\":\"phone\",\"paramValue\": null}];\n\n\nrunCode(mockData);\n\
     \nassertThat(amznCalls.length).isEqualTo(5);\n\nconst tokenConfig = {\n  email:\
     \ 'aa',\n  phonenumber: '',\n  gdpr: { enabled: false, consent: '',},\n  ttl:\
@@ -973,10 +977,10 @@ scenarios:
     assertThat(amznCalls[1]).isEqualTo(['setRegion', region]);\nassertThat(amznCalls[2]).isEqualTo(['addTag',\
     \ tag1]);\nassertThat(amznCalls[3]).isEqualTo(['addtcfv2', {}]);\nassertThat(amznCalls[4]).isEqualTo(['trackEvent',\
     \ eventName, { gtmVersion: version }]);\nassertApi('gtmOnSuccess').wasCalled();\n\
-    */\n  \namznCalls = [];\n"
+    \n  \namznCalls = [];\n"
 - name: Test Advanced Matching with null Email and Phone
   code: |
-    /*mockData.advancedMatchingList = [{"paramName":"email","paramValue": null},{"paramName":"phone","paramValue": "bb"}];
+    mockData.advancedMatchingList = [{"paramName":"email","paramValue": null},{"paramName":"phone","paramValue": "bb"}];
 
 
     runCode(mockData);
@@ -996,26 +1000,16 @@ scenarios:
     assertThat(amznCalls[3]).isEqualTo(['addtcfv2', {}]);
     assertThat(amznCalls[4]).isEqualTo(['trackEvent', eventName, { gtmVersion: version }]);
     assertApi('gtmOnSuccess').wasCalled();
-      */
+
     amznCalls = [];
 - name: Test Advanced Matching with null Email and null Phone
-  code: |-
-    mockData.advancedMatchingList = [{"paramName":"email","paramValue": null},{"paramName":"phone","paramValue": null}];
-         /*
-    // Call runCode to run the template's code.
-    runCode(mockData);
-    log(amznCalls);
-
-    // No setUserData called
-    assertThat(amznCalls.length).isEqualTo(4);
-    assertThat(amznCalls[0]).isEqualTo(['setRegion', region]);
-    assertThat(amznCalls[1]).isEqualTo(['addTag', tag1]);
-    assertThat(amznCalls[2]).isEqualTo(['addtcfv2', {}]);
-    assertThat(amznCalls[3]).isEqualTo(['trackEvent', eventName, { gtmVersion: version }]);
-
-    assertApi('gtmOnSuccess').wasCalled();
-    */
-    amznCalls = [];
+  code: "mockData.advancedMatchingList = [{\"paramName\":\"email\",\"paramValue\"\
+    : null},{\"paramName\":\"phone\",\"paramValue\": null}];\n     \n// Call runCode\
+    \ to run the template's code.\nrunCode(mockData);\nlog(amznCalls);\n\n// No setUserData\
+    \ called\nassertThat(amznCalls.length).isEqualTo(4);\nassertThat(amznCalls[0]).isEqualTo(['setRegion',\
+    \ region]);\nassertThat(amznCalls[1]).isEqualTo(['addTag', tag1]);\nassertThat(amznCalls[2]).isEqualTo(['addtcfv2',\
+    \ {}]);\nassertThat(amznCalls[3]).isEqualTo(['trackEvent', eventName, { gtmVersion:\
+    \ version }]);\n\nassertApi('gtmOnSuccess').wasCalled();\n\namznCalls = [];"
 - name: Test Advanced Matching with undefined paramValue
   code: "mockData.advancedMatchingList = [{\"paramName\":\"email\"}];\n\n     \n//\
     \ Call runCode to run the template's code.\nrunCode(mockData);\n\n// No setUserData\
@@ -1034,22 +1028,23 @@ scenarios:
   code: "mockData.includeTcf = false;\nmockData.gdpr = 1;\nmockData.gdprConsent =\
     \ \"asd\";\nmockData.advancedMatchingList = [{\"paramName\":\"email\",\"paramValue\"\
     : \"aa\"}];\n\n\nrunCode(mockData);\n\nassertThat(amznCalls.length).isEqualTo(5);\n\
-    \nconst tokenConfig = {\n  email: 'aa',\n  gdpr: { enabled: false, consent: '',},\n\
-    \  ttl: 9600,\n};\n\nassertThat(amznCalls[0]).isEqualTo(['setUserData', tokenConfig]);\n\
-    assertThat(amznCalls[1]).isEqualTo(['setRegion', region]);\nassertThat(amznCalls[2]).isEqualTo(['addTag',\
-    \ tag1]);\nassertThat(amznCalls[3]).isEqualTo(['addtcfv2', {}]);\nassertThat(amznCalls[4]).isEqualTo(['trackEvent',\
-    \ eventName, { gtmVersion: version }]);\nassertApi('gtmOnSuccess').wasCalled();\n\
-    \  \namznCalls = [];\n\n"
+    \nconst tokenConfig = {\n  email: 'aa',\n  phonenumber: '',\n  gdpr: { enabled:\
+    \ false, consent: '',},\n  ttl: 9600,\n};\n\nassertThat(amznCalls[0]).isEqualTo(['setUserData',\
+    \ tokenConfig]);\nassertThat(amznCalls[1]).isEqualTo(['setRegion', region]);\n\
+    assertThat(amznCalls[2]).isEqualTo(['addTag', tag1]);\nassertThat(amznCalls[3]).isEqualTo(['addtcfv2',\
+    \ {}]);\nassertThat(amznCalls[4]).isEqualTo(['trackEvent', eventName, { gtmVersion:\
+    \ version }]);\nassertApi('gtmOnSuccess').wasCalled();\n  \namznCalls = [];\n\n"
 - name: Testing Advanced Matching with TCF and GDPR consent
   code: "mockData.includeTcf = true;\nmockData.gdpr = 1;\nmockData.gdprConsent = \"\
     asd\";\nmockData.ttl = 9000;\nmockData.advancedMatchingList = [{\"paramName\"\
     :\"email\",\"paramValue\": \"aa\"}];\n\nrunCode(mockData);\n\nassertThat(amznCalls.length).isEqualTo(5);\n\
-    \nconst tokenConfig = {\n  email: 'aa',\n  gdpr: { enabled: true, consent: 'asd',},\n\
-    \  ttl: 9000,\n};\n\nassertThat(amznCalls[0]).isEqualTo(['setUserData', tokenConfig]);\n\
-    assertThat(amznCalls[1]).isEqualTo(['setRegion', region]);\nassertThat(amznCalls[2]).isEqualTo(['addTag',\
-    \ tag1]);\nassertThat(amznCalls[3]).isEqualTo(['addtcfv2', {gdpr: 1, gdprConsent:\
-    \ 'asd'}]);\nassertThat(amznCalls[4]).isEqualTo(['trackEvent', eventName, { gtmVersion:\
-    \ version }]);\nassertApi('gtmOnSuccess').wasCalled();\n  \namznCalls = [];\n\n"
+    \nconst tokenConfig = {\n  email: 'aa',\n  phonenumber: '',\n  gdpr: { enabled:\
+    \ true, consent: 'asd',},\n  ttl: 9000,\n};\n\nassertThat(amznCalls[0]).isEqualTo(['setUserData',\
+    \ tokenConfig]);\nassertThat(amznCalls[1]).isEqualTo(['setRegion', region]);\n\
+    assertThat(amznCalls[2]).isEqualTo(['addTag', tag1]);\nassertThat(amznCalls[3]).isEqualTo(['addtcfv2',\
+    \ {gdpr: 1, gdprConsent: 'asd'}]);\nassertThat(amznCalls[4]).isEqualTo(['trackEvent',\
+    \ eventName, { gtmVersion: version }]);\nassertApi('gtmOnSuccess').wasCalled();\n\
+    \  \namznCalls = [];\n\n"
 - name: Testing Advanced Matching with TCF and no GDPR consent
   code: "mockData.includeTcf = true;\nmockData.gdpr = 1;\nmockData.gdprConsent = \"\
     \";\nmockData.ttl = 9000;\nmockData.advancedMatchingList = [{\"paramName\":\"\
