@@ -508,17 +508,26 @@ for (const key in finalAttributes) {
   }
 }
 
-const gdprAttributes = {};
+const gdprAatTokenAttributes = {};
+const gdprEventAttributes = {};
 let ttl = null;
 
 if (data.includeTcf) {
   const possibleGDPRvalues = [0, 1, 2];
-  if (possibleGDPRvalues.indexOf(data.gdpr) >= 0) gdprAttributes.gdpr = data.gdpr;
+  if (possibleGDPRvalues.indexOf(data.gdpr) >= 0) {
+    gdprAatTokenAttributes.gdpr = data.gdpr;
+    gdprEventAttributes.gdpr = data.gdpr;
+  }
 
   const possibleGDPRPDvalues = [-1, 0, 1];
-  if (possibleGDPRPDvalues.indexOf(data.gdprPd) >= 0) gdprAttributes.gdprPd = data.gdprPd;
+  if (possibleGDPRPDvalues.indexOf(data.gdprPd) >= 0) {
+    gdprEventAttributes.gdpr_pd = data.gdprPd;
+  }
 
-  if (data.gdprConsent) gdprAttributes.gdprConsent = data.gdprConsent;
+  if (data.gdprConsent) {
+    gdprAatTokenAttributes.gdprConsent = data.gdprConsent;
+    gdprEventAttributes.gdpr_consent = data.gdprConsent;
+  }
 }
 
 const tokenConfig = {
@@ -548,11 +557,11 @@ if (data.advancedMatchingList) {
     }
   });
 
-  if (gdprAttributes.gdpr) {
-    tokenConfig.gdpr.enabled = !!gdprAttributes.gdpr;
+  if (gdprAatTokenAttributes.gdpr) {
+    tokenConfig.gdpr.enabled = !!gdprAatTokenAttributes.gdpr;
   }
-  if (gdprAttributes.gdprConsent) {
-    tokenConfig.gdpr.consent = gdprAttributes.gdprConsent;
+  if (gdprAatTokenAttributes.gdprConsent) {
+    tokenConfig.gdpr.consent = gdprAatTokenAttributes.gdprConsent;
   }
 
   if (tokenConfig.gdpr.enabled && !tokenConfig.gdpr.consent) {
@@ -591,7 +600,7 @@ const trackEvents = () => {
 
   amzn('setRegion', region);
   tagIds.forEach(item => amzn("addTag", item));
-  amzn('addtcfv2', gdprAttributes);
+  amzn('addtcfv2', gdprEventAttributes);
   amzn('trackEvent', eventName, finalAttributes);
 };
 
@@ -818,7 +827,7 @@ scenarios:
   code: "mockData.includeTcf = true;\n\nlet i = -1;\n\nwhile (i < 2) {\n  mockData.gdprPd\
     \ = i;\n  runCode(mockData);\n\n  assertThat(amznCalls.length).isEqualTo(4);\n\
     \  assertThat(amznCalls[0]).isEqualTo(['setRegion', region]);\n  assertThat(amznCalls[1]).isEqualTo(['addTag',\
-    \ tag1]);\n  assertThat(amznCalls[2]).isEqualTo(['addtcfv2', { gdprPd: i }]);\n\
+    \ tag1]);\n  assertThat(amznCalls[2]).isEqualTo(['addtcfv2', { gdpr_pd: i }]);\n\
     \  assertThat(amznCalls[3]).isEqualTo(['trackEvent', eventName, { gtmVersion:\
     \ version }]);\n  assertApi('gtmOnSuccess').wasCalled();\n  \n  amznCalls = [];\n\
     \  i += 1;\n}"
@@ -838,7 +847,7 @@ scenarios:
     assertThat(amznCalls.length).isEqualTo(4);
     assertThat(amznCalls[0]).isEqualTo(['setRegion', region]);
     assertThat(amznCalls[1]).isEqualTo(['addTag', tag1]);
-    assertThat(amznCalls[2]).isEqualTo(['addtcfv2', { gdprConsent: exampleTCFv2ConsentString }]);
+    assertThat(amznCalls[2]).isEqualTo(['addtcfv2', { gdpr_consent: exampleTCFv2ConsentString }]);
     assertThat(amznCalls[3]).isEqualTo(['trackEvent', eventName, { gtmVersion: version }]);
     assertApi('gtmOnSuccess').wasCalled();
 - name: with tcf - includeTcf = true and gdprConsent is falsy
@@ -1042,7 +1051,7 @@ scenarios:
     \ true, consent: 'asd',},\n  ttl: 9000,\n};\n\nassertThat(amznCalls[0]).isEqualTo(['setUserData',\
     \ tokenConfig]);\nassertThat(amznCalls[1]).isEqualTo(['setRegion', region]);\n\
     assertThat(amznCalls[2]).isEqualTo(['addTag', tag1]);\nassertThat(amznCalls[3]).isEqualTo(['addtcfv2',\
-    \ {gdpr: 1, gdprConsent: 'asd'}]);\nassertThat(amznCalls[4]).isEqualTo(['trackEvent',\
+    \ {gdpr: 1, gdpr_consent: 'asd'}]);\nassertThat(amznCalls[4]).isEqualTo(['trackEvent',\
     \ eventName, { gtmVersion: version }]);\nassertApi('gtmOnSuccess').wasCalled();\n\
     \  \namznCalls = [];\n\n"
 - name: Testing Advanced Matching with TCF and no GDPR consent
