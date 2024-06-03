@@ -1,6 +1,8 @@
 homepage: "https://advertising.amazon.com"
 documentation: "https://advertising.amazon.com/dsp/help#/"
 versions:
+  - sha: f37eb4df4e9ac49157b81bf8e15b1b16d792b3a4
+    changeNotes: Update GTM template to ignore events sent by gtm-msr
   - sha: 1a497bc5206bb3dd179fcef6c054f6c2fb84ac08
     changeNotes: Adding new GDPR object to ensure proper naming conventions for sending data
   - sha: a9c5ef1b1c42164a7723ffb30e96bf08f09cd1fb
