@@ -1,4 +1,4 @@
-﻿___TERMS_OF_SERVICE___
+___TERMS_OF_SERVICE___
 
 By creating or modifying this file you agree to Google Tag Manager's Community
 Template Gallery Developer Terms of Service available at
@@ -24,7 +24,7 @@ ___INFO___
     "ATTRIBUTION",
     "CONVERSIONS"
   ],
-  "description": "Amazon Advertising Tag template - version 3.4",
+  "description": "Amazon Advertising Tag template - version 3.6",
   "containerContexts": [
     "WEB"
   ]
@@ -188,6 +188,10 @@ ___TEMPLATE_PARAMETERS___
               {
                 "value": "phone",
                 "displayValue": "Phone Number"
+              },
+              {
+                "value": "MATCH_ID",
+                "displayValue": "Match ID"
               }
             ],
             "valueValidators": [],
@@ -263,6 +267,58 @@ ___TEMPLATE_PARAMETERS___
               {
                 "value": "value",
                 "displayValue": "value"
+              },
+              {
+                "value": "brand",
+                "displayValue": "brand"
+              },
+              {
+                "value": "category",
+                "displayValue": "category"
+              },
+              {
+                "value": "productId",
+                "displayValue": "productId"
+              },
+              {
+                "value": "attr1",
+                "displayValue": "attr1"
+              },
+              {
+                "value": "attr2",
+                "displayValue": "attr2"
+              },
+              {
+                "value": "attr3",
+                "displayValue": "attr3"
+              },
+              {
+                "value": "attr4",
+                "displayValue": "attr4"
+              },
+              {
+                "value": "attr5",
+                "displayValue": "attr5"
+              },
+              {
+                "value": "attr6",
+                "displayValue": "attr6"
+              },
+              {
+                "value": "attr7",
+                "displayValue": "attr7"
+              },
+              {
+                "value": "attr8",
+                "displayValue": "attr8"
+              },
+              {
+                "value": "attr9",
+                "displayValue": "attr9"
+              },
+              {
+                "value": "attr10",
+                "displayValue": "attr10"
               }
             ]
           },
@@ -305,6 +361,58 @@ ___TEMPLATE_PARAMETERS___
               {
                 "value": "value",
                 "displayValue": "value"
+              },
+              {
+                "value": "brand",
+                "displayValue": "brand"
+              },
+              {
+                "value": "category",
+                "displayValue": "category"
+              },
+              {
+                "value": "productId",
+                "displayValue": "productId"
+              },
+              {
+                "value": "attr1",
+                "displayValue": "attr1"
+              },
+              {
+                "value": "attr2",
+                "displayValue": "attr2"
+              },
+              {
+                "value": "attr3",
+                "displayValue": "attr3"
+              },
+              {
+                "value": "attr4",
+                "displayValue": "attr4"
+              },
+              {
+                "value": "attr5",
+                "displayValue": "attr5"
+              },
+              {
+                "value": "attr6",
+                "displayValue": "attr6"
+              },
+              {
+                "value": "attr7",
+                "displayValue": "attr7"
+              },
+              {
+                "value": "attr8",
+                "displayValue": "attr8"
+              },
+              {
+                "value": "attr9",
+                "displayValue": "attr9"
+              },
+              {
+                "value": "attr10",
+                "displayValue": "attr10"
               }
             ]
           },
@@ -441,13 +549,73 @@ ___TEMPLATE_PARAMETERS___
         "defaultValue": -1
       }
     ]
+  },
+  {
+    "type": "GROUP",
+    "name": "amazonConsent",
+    "displayName": "Amazon Consent",
+    "groupStyle": "ZIPPY_CLOSED",
+    "subParams": [
+      {
+        "type": "CHECKBOX",
+        "name": "enabled",
+        "checkboxText": "Enabled",
+        "simpleValueType": true
+      },
+      {
+        "type": "GROUP",
+        "name": "geo",
+        "displayName": "Geo Attributes",
+        "groupStyle": "ZIPPY_CLOSED",
+        "subParams": [
+          {
+            "type": "TEXT",
+            "name": "ipAddress",
+            "displayName": "IP Address",
+            "simpleValueType": true
+          },
+          {
+            "type": "TEXT",
+            "name": "countryCode",
+            "displayName": "Country Code",
+            "simpleValueType": true
+          }
+        ]
+      },
+      {
+        "type": "GROUP",
+        "name": "amazonConsentFormat",
+        "displayName": "Amazon Consent Format",
+        "groupStyle": "ZIPPY_CLOSED",
+        "subParams": [
+          {
+            "type": "TEXT",
+            "name": "amznAdStorage",
+            "displayName": "Amazon Ad Storage (GRANTED or DENIED)",
+            "simpleValueType": true
+          },
+          {
+            "type": "TEXT",
+            "name": "amznUserData",
+            "displayName": "Amazon User Data (GRANTED or DENIED)",
+            "simpleValueType": true
+          }
+        ]
+      },
+      {
+        "type": "TEXT",
+        "name": "gpp",
+        "displayName": "Global Privacy Platform string",
+        "simpleValueType": true
+      }
+    ]
   }
 ]
 
 
 ___SANDBOXED_JS_FOR_WEB_TEMPLATE___
 
-const version = "3.5";
+const version = "3.6";
 
 const makeTableMap = require('makeTableMap');
 const createArgumentsQueue = require('createArgumentsQueue');
@@ -457,12 +625,24 @@ const copyFromWindow = require('copyFromWindow');
 const makeString = require('makeString');
 const makeInteger = require('makeInteger');
 const getUrl = require('getUrl');
+const isConsentGranted = require('isConsentGranted');
 
 const eventSourceUrl = getUrl();
 
 if (eventSourceUrl.indexOf('gtm-msr.appspot.com') !== -1) {
    log("Ignoring events sent by gtm msr: " + eventSourceUrl);
    return data.gtmOnSuccess();
+}
+
+// Consent check - respect GTM Consent Mode for ad_storage and ad_user_data
+if (!isConsentGranted('ad_storage')) {
+  log("Amazon Ad Tag: ad_storage consent not granted. Tag will not fire.");
+  return data.gtmOnSuccess();
+}
+
+if (!isConsentGranted('ad_user_data')) {
+  log("Amazon Ad Tag: ad_user_data consent not granted. Tag will not fire.");
+  return data.gtmOnSuccess();
 }
 
 
@@ -564,6 +744,9 @@ if (data.advancedMatchingList) {
     if (e.paramName === "phone" && paramVal.length > 0) {
       tokenConfig.phonenumber = paramVal;
     }
+    if (e.paramName === "MATCH_ID" && paramVal.length > 0) {
+      finalAttributes["MATCH_ID"] = paramVal;
+    }
   });
 
   if (gdprAatTokenAttributes.gdpr) {
@@ -601,6 +784,10 @@ const trackEvents = () => {
   const amzn = getAmzn();
   if (!amzn) {
      return fail("Amazon Ad Tag not defined in browser window");
+  }
+
+  if (data.amazonConsent && data.amazonConsent.enabled) {
+     amzn('setAmazonConsent', data.amazonConsent);
   }
 
   if (data.advancedMatchingList && ((tokenConfig.email !== '') || (tokenConfig.phonenumber !== ''))) {
@@ -786,6 +973,90 @@ ___WEB_PERMISSIONS___
           "value": {
             "type": 1,
             "string": "any"
+          }
+        }
+      ]
+    },
+    "clientAnnotations": {
+      "isEditedByUser": true
+    },
+    "isRequired": true
+  },
+  {
+    "instance": {
+      "key": {
+        "publicId": "access_consent",
+        "versionId": "1"
+      },
+      "param": [
+        {
+          "key": "consentTypes",
+          "value": {
+            "type": 2,
+            "listItem": [
+              {
+                "type": 3,
+                "mapKey": [
+                  {
+                    "type": 1,
+                    "string": "consentType"
+                  },
+                  {
+                    "type": 1,
+                    "string": "read"
+                  },
+                  {
+                    "type": 1,
+                    "string": "write"
+                  }
+                ],
+                "mapValue": [
+                  {
+                    "type": 1,
+                    "string": "ad_storage"
+                  },
+                  {
+                    "type": 8,
+                    "boolean": true
+                  },
+                  {
+                    "type": 8,
+                    "boolean": false
+                  }
+                ]
+              },
+              {
+                "type": 3,
+                "mapKey": [
+                  {
+                    "type": 1,
+                    "string": "consentType"
+                  },
+                  {
+                    "type": 1,
+                    "string": "read"
+                  },
+                  {
+                    "type": 1,
+                    "string": "write"
+                  }
+                ],
+                "mapValue": [
+                  {
+                    "type": 1,
+                    "string": "ad_user_data"
+                  },
+                  {
+                    "type": 8,
+                    "boolean": true
+                  },
+                  {
+                    "type": 8,
+                    "boolean": false
+                  }
+                ]
+              }
+            ]
           }
         }
       ]
@@ -1168,13 +1439,84 @@ scenarios:
     runCode(mockData);
     assertApi('gtmOnSuccess').wasCalled();
     assertThat(amznCalls.length).isEqualTo(0);
-setup: |
+- name: Test can handle Amazon Consent
+  code: |2
+
+    mockData.amazonConsent = {
+        enabled: true,
+        geo: {
+          countryCode: "US"
+        }
+      };
+
+    // Call runCode to run the template's code.
+    runCode(mockData);
+
+    assertThat(amznCalls.length).isEqualTo(5);
+    assertThat(amznCalls[0]).isEqualTo(['setAmazonConsent', { enabled: true, geo: { countryCode: "US"} }]);
+    assertThat(amznCalls[1]).isEqualTo(['setRegion', region]);
+    assertThat(amznCalls[2]).isEqualTo(['addTag', tag1]);
+    assertThat(amznCalls[4]).isEqualTo(['trackEvent', eventName, { gtmVersion: version }]);
+    assertApi('gtmOnSuccess').wasCalled();
+- name: Test can handle match ID
+  code: |
+    mockData.advancedMatchingList = [{"paramName":"MATCH_ID","paramValue":"test1234"}];
+    mockData.standardEventName = "Off-AmazonPurchases";
+
+    runCode(mockData);
+
+    assertThat(amznCalls.length).isEqualTo(4);
+
+    assertThat(amznCalls[0]).isEqualTo(['setRegion', region]);
+    assertThat(amznCalls[1]).isEqualTo(['addTag', tag1]);
+    assertThat(amznCalls[2]).isEqualTo(['addtcfv2', {}]);
+    assertThat(amznCalls[3]).isEqualTo(['trackEvent', "Off-AmazonPurchases", {"MATCH_ID":
+    "test1234", "gtmVersion":version}]);
+    assertApi('gtmOnSuccess').wasCalled();
+
+    amznCalls = [];
+- name: Test ad_storage consent denied prevents tag from firing
+  code: |
+    mock('isConsentGranted', (consentType) => {
+      if (consentType === 'ad_storage') return false;
+      return true;
+    });
+
+    runCode(mockData);
+
+    assertThat(amznCalls.length).isEqualTo(0);
+    assertApi('gtmOnSuccess').wasCalled();
+    assertApi('gtmOnFailure').wasNotCalled();
+- name: Test ad_user_data consent denied prevents tag from firing
+  code: |
+    mock('isConsentGranted', (consentType) => {
+      if (consentType === 'ad_user_data') return false;
+      return true;
+    });
+
+    runCode(mockData);
+
+    assertThat(amznCalls.length).isEqualTo(0);
+    assertApi('gtmOnSuccess').wasCalled();
+    assertApi('gtmOnFailure').wasNotCalled();
+- name: Test both ad_storage and ad_user_data denied prevents tag from firing
+  code: |
+    mock('isConsentGranted', (consentType) => {
+      return false;
+    });
+
+    runCode(mockData);
+
+    assertThat(amznCalls.length).isEqualTo(0);
+    assertApi('gtmOnSuccess').wasCalled();
+    assertApi('gtmOnFailure').wasNotCalled();
+setup: |-
   const log = require('logToConsole');
 
   const tag1 = 'tagId1';
   const eventName = 'PageView';
   const region = 'NA';
-  const version = '3.5';
+  const version = '3.6';
   const exampleTCFv2ConsentString = 'COw4XqLOw4XqLAAAAAENAXCAAAAAAAAAAAAAAAAAAAAA.IFukWSQgAIQwgI0QEByFAAAAeIAACAIgSAAQAIAgEQACEABAAAgAQFAEAIAAAGBAAgAAAAQAIFAAMCQAAgAAQiRAEQAAAAANAAIAAggAIYQFAAARmggBC3ZCYzU2yIA.QFukWSQgAIQwgI0QEByFAAAAeIAACAIgSAAQAIAgEQACEABAAAgAQFAEAIAAAGBAAgAAAAQAIFAAMCQAAgAAQiRAEQAAAAANAAIAAggAIYQFAAARmggBC3ZCYzU2yIA.YAAAAAAAAAAAAAAAAAA'; // https://github.com/InteractiveAdvertisingBureau/GDPR-Transparency-and-Consent-Framework/blob/master/TCFv2/IAB%20Tech%20Lab%20-%20Consent%20string%20and%20vendor%20list%20formats%20v2.md#tc-string-format
 
   const mockData = {
@@ -1211,4 +1553,5 @@ setup: |
 ___NOTES___
 
 Created on 3/26/2020, 3:08:52 PM
+
 
