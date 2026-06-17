@@ -1509,26 +1509,30 @@ scenarios:
     runCode(mockData);
     assertApi('gtmOnSuccess').wasCalled();
     assertThat(amznCalls.length).isEqualTo(0);
-- name: Test can handle Amazon Consent
-  code: |2
+- name: ACS - consent payload sent with GRANTED values
+  code: |
+    let amznConsentCalled = false;
+    let amznConsentArgs = null;
+    mock('callInWindow', (fn, args) => {
+      if (fn === 'amznConsent') {
+        amznConsentCalled = true;
+        amznConsentArgs = args;
+      }
+    });
 
-    mockData.amazonConsent = {
-        enabled: true,
-        geo: {
-          countryCode: "US"
-        }
-      };
+    mockData.enabled = true;
+    mockData.countryCode = 'US';
+    mockData.amznAdStorage = 'GRANTED';
+    mockData.amznUserData = 'GRANTED';
 
-    // Call runCode to run the template's code.
     runCode(mockData);
 
-    assertThat(amznCalls.length).isEqualTo(5);
-    assertThat(amznCalls[0]).isEqualTo(['setAmazonConsent', { enabled: true, geo: { countryCode: "US"} }]);
-    assertThat(amznCalls[1]).isEqualTo(['setRegion', region]);
-    assertThat(amznCalls[2]).isEqualTo(['addTag', tag1]);
-    assertThat(amznCalls[4]).isEqualTo(['trackEvent', eventName, { gtmVersion: version }]);
+    assertThat(amznConsentCalled).isEqualTo(true);
+    assertThat(amznConsentArgs.countryCode).isEqualTo('US');
+    assertThat(amznConsentArgs.enableAdStorage).isEqualTo(true);
+    assertThat(amznConsentArgs.enableUserData).isEqualTo(true);
     assertApi('gtmOnSuccess').wasCalled();
-- name: Test can handle match ID
+- name: Advanced Matching - match ID passed as event attribute
   code: |
     mockData.advancedMatchingList = [{"paramName":"MATCH_ID","paramValue":"test1234"}];
     mockData.standardEventName = "Off-AmazonPurchases";
@@ -1545,7 +1549,7 @@ scenarios:
     assertApi('gtmOnSuccess').wasCalled();
 
     amznCalls = [];
-- name: Test ad_storage consent denied prevents tag from firing
+- name: Consent Mode - ad_storage denied blocks tag
   code: |
     mock('isConsentGranted', (consentType) => {
       if (consentType === 'ad_storage') return false;
@@ -1557,7 +1561,7 @@ scenarios:
     assertThat(amznCalls.length).isEqualTo(0);
     assertApi('gtmOnSuccess').wasCalled();
     assertApi('gtmOnFailure').wasNotCalled();
-- name: Test ad_user_data consent denied prevents tag from firing
+- name: Consent Mode - ad_user_data denied blocks tag
   code: |
     mock('isConsentGranted', (consentType) => {
       if (consentType === 'ad_user_data') return false;
@@ -1569,7 +1573,7 @@ scenarios:
     assertThat(amznCalls.length).isEqualTo(0);
     assertApi('gtmOnSuccess').wasCalled();
     assertApi('gtmOnFailure').wasNotCalled();
-- name: Test both ad_storage and ad_user_data denied prevents tag from firing
+- name: Consent Mode - both denied blocks tag
   code: |
     mock('isConsentGranted', (consentType) => {
       return false;
@@ -1580,7 +1584,7 @@ scenarios:
     assertThat(amznCalls.length).isEqualTo(0);
     assertApi('gtmOnSuccess').wasCalled();
     assertApi('gtmOnFailure').wasNotCalled();
-- name: Test Amazon Consent injects consent library when countryCode is set
+- name: ACS - consent library injected when countryCode set
   code: |
     mockData.enabled = true;
     mockData.countryCode = 'US';
@@ -1591,7 +1595,7 @@ scenarios:
 
     assertApi('injectScript').wasCalled();
     assertApi('gtmOnSuccess').wasCalled();
-- name: Test Amazon Consent calls amznConsent with GRANTED values
+- name: ACS - GRANTED values passed as true
   code: |
     let amznConsentArgs = null;
     mock('callInWindow', (fn, args) => {
@@ -1610,7 +1614,7 @@ scenarios:
     assertThat(amznConsentArgs.enableAdStorage).isEqualTo(true);
     assertThat(amznConsentArgs.enableUserData).isEqualTo(true);
     assertApi('gtmOnSuccess').wasCalled();
-- name: Test Amazon Consent calls amznConsent with DENIED values
+- name: ACS - DENIED values passed as false
   code: |
     let amznConsentArgs = null;
     mock('callInWindow', (fn, args) => {
@@ -1629,7 +1633,7 @@ scenarios:
     assertThat(amznConsentArgs.enableAdStorage).isEqualTo(false);
     assertThat(amznConsentArgs.enableUserData).isEqualTo(false);
     assertApi('gtmOnSuccess').wasCalled();
-- name: Test Amazon Consent accepts true/false string values
+- name: ACS - true/false strings accepted
   code: |
     let amznConsentArgs = null;
     mock('callInWindow', (fn, args) => {
@@ -1647,7 +1651,7 @@ scenarios:
     assertThat(amznConsentArgs.enableAdStorage).isEqualTo(true);
     assertThat(amznConsentArgs.enableUserData).isEqualTo(false);
     assertApi('gtmOnSuccess').wasCalled();
-- name: Test Amazon Consent includes GPP string when provided
+- name: ACS - GPP string included in payload
   code: |
     let amznConsentArgs = null;
     mock('callInWindow', (fn, args) => {
@@ -1665,7 +1669,7 @@ scenarios:
     assertThat(amznConsentArgs).isNotNull();
     assertThat(amznConsentArgs.gpp).isEqualTo('DBABLA~BVVqAAAACCA.QA');
     assertApi('gtmOnSuccess').wasCalled();
-- name: Test Amazon Consent skipped when enabled is false
+- name: ACS - skipped when disabled
   code: |
     mockData.enabled = false;
     mockData.countryCode = 'US';

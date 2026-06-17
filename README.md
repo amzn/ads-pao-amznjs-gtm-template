@@ -36,7 +36,7 @@ Enable Advanced Matching to pass hashed user data (email, phone number, or Match
 If operating in GDPR regions, enable TCFv2 to pass consent signals (GDPR applicability, consent string, personal data flag) with your events.
 
 ### Amazon Consent
-Enable this section to pass Amazon Consent Signal (ACS) data with your events. When enabled, the template injects `amzn-consent.js` and calls `window.amznConsent()` with your configured values.
+Check **Enabled** to pass Amazon Consent Signal (ACS) data with your events.
 
 **Fields:**
 - **Country Code** (required) — ISO 3166 two-letter code indicating the legal origin of the request (e.g., US, GB, DE, JP)
