@@ -563,44 +563,33 @@ ___TEMPLATE_PARAMETERS___
         "simpleValueType": true
       },
       {
-        "type": "GROUP",
-        "name": "geo",
-        "displayName": "Geo Attributes",
-        "groupStyle": "ZIPPY_CLOSED",
-        "subParams": [
-          {
-            "type": "TEXT",
-            "name": "ipAddress",
-            "displayName": "IP Address",
-            "simpleValueType": true
-          },
-          {
-            "type": "TEXT",
-            "name": "countryCode",
-            "displayName": "Country Code",
-            "simpleValueType": true
-          }
-        ]
+        "type": "TEXT",
+        "name": "countryCode",
+        "displayName": "Country Code (ISO 3166, e.g. US, GB, DE, JP)",
+        "simpleValueType": true,
+        "valueHint": "US"
       },
       {
-        "type": "GROUP",
-        "name": "amazonConsentFormat",
-        "displayName": "Amazon Consent Format",
-        "groupStyle": "ZIPPY_CLOSED",
-        "subParams": [
-          {
-            "type": "TEXT",
-            "name": "amznAdStorage",
-            "displayName": "Amazon Ad Storage (GRANTED or DENIED)",
-            "simpleValueType": true
-          },
-          {
-            "type": "TEXT",
-            "name": "amznUserData",
-            "displayName": "Amazon User Data (GRANTED or DENIED)",
-            "simpleValueType": true
-          }
-        ]
+        "type": "TEXT",
+        "name": "ipAddress",
+        "displayName": "IP Address",
+        "simpleValueType": true
+      },
+      {
+        "type": "TEXT",
+        "name": "amznAdStorage",
+        "displayName": "Amazon Ad Storage",
+        "simpleValueType": true,
+        "help": "Accepted values: GRANTED, DENIED, true, false",
+        "valueHint": "GRANTED"
+      },
+      {
+        "type": "TEXT",
+        "name": "amznUserData",
+        "displayName": "Amazon User Data",
+        "simpleValueType": true,
+        "help": "Accepted values: GRANTED, DENIED, true, false",
+        "valueHint": "GRANTED"
       },
       {
         "type": "TEXT",
@@ -626,6 +615,7 @@ const makeString = require('makeString');
 const makeInteger = require('makeInteger');
 const getUrl = require('getUrl');
 const isConsentGranted = require('isConsentGranted');
+const callInWindow = require('callInWindow');
 
 const eventSourceUrl = getUrl();
 
@@ -763,7 +753,9 @@ if (data.advancedMatchingList) {
   if (ttl) {
     tokenConfig.ttl = ttl;
   }
-  log("token config =", tokenConfig);
+  log("Amazon Ad Tag: Advanced Matching enabled -",
+    "email:", tokenConfig.email ? "set" : "not set",
+    "phone:", tokenConfig.phonenumber ? "set" : "not set");
 }
 
 // Define amzn fn in window
@@ -786,10 +778,6 @@ const trackEvents = () => {
      return fail("Amazon Ad Tag not defined in browser window");
   }
 
-  if (data.amazonConsent && data.amazonConsent.enabled) {
-     amzn('setAmazonConsent', data.amazonConsent);
-  }
-
   if (data.advancedMatchingList && ((tokenConfig.email !== '') || (tokenConfig.phonenumber !== ''))) {
      amzn('setUserData', tokenConfig);
   }
@@ -797,11 +785,54 @@ const trackEvents = () => {
   amzn('setRegion', region);
   tagIds.forEach(item => amzn("addTag", item));
   amzn('addtcfv2', gdprEventAttributes);
+  if (data.includeTcf) {
+    log("Amazon Ad Tag: TCF consent signal set -",
+      "gdpr:", gdprEventAttributes.gdpr !== undefined ? gdprEventAttributes.gdpr : "not set",
+      "consent string:", gdprEventAttributes.gdpr_consent ? "set" : "not set",
+      "gdpr_pd:", gdprEventAttributes.gdpr_pd !== undefined ? gdprEventAttributes.gdpr_pd : "not set");
+  }
   amzn('trackEvent', eventName, finalAttributes);
+  log("Amazon Ad Tag: fired", eventName, "for", tagIds.length, "tag(s)");
 };
 
-trackEvents();
-injectScript('https://c.amazon-adsystem.com/aat/amzn.js', data.gtmOnSuccess, data.gtmOnFailure, 'amznScript');
+// Set consent via amzn-consent.js before amzn.js loads
+const setAmazonConsent = () => {
+  if (data.enabled && data.countryCode) {
+    const consentData = {
+      countryCode: data.countryCode,
+      enableAdStorage: data.amznAdStorage === 'GRANTED' || data.amznAdStorage === 'true' || data.amznAdStorage === true,
+      enableUserData: data.amznUserData === 'GRANTED' || data.amznUserData === 'true' || data.amznUserData === true
+    };
+
+    if (data.ipAddress) {
+      consentData.ipAddress = data.ipAddress;
+    }
+
+    if (data.gpp) {
+      consentData.gpp = data.gpp;
+    }
+
+    log("Amazon Ad Tag: setAmazonConsent:", consentData);
+    callInWindow('amznConsent', consentData);
+  }
+};
+
+log("Amazon Ad Tag: amazonConsent check:", data.countryCode, data.enabled);
+
+if (data.enabled && data.countryCode) {
+  injectScript('https://c.amazon-adsystem.com/aat/amzn-consent.js', () => {
+    setAmazonConsent();
+    trackEvents();
+    injectScript('https://c.amazon-adsystem.com/aat/amzn.js', data.gtmOnSuccess, data.gtmOnFailure, 'amznScript');
+  }, () => {
+    log("Amazon Ad Tag: amzn-consent.js failed to load.");
+    trackEvents();
+    injectScript('https://c.amazon-adsystem.com/aat/amzn.js', data.gtmOnSuccess, data.gtmOnFailure, 'amznScript');
+  }, 'amznConsentScript');
+} else {
+  trackEvents();
+  injectScript('https://c.amazon-adsystem.com/aat/amzn.js', data.gtmOnSuccess, data.gtmOnFailure, 'amznScript');
+}
 
 
 ___WEB_PERMISSIONS___
@@ -903,6 +934,45 @@ ___WEB_PERMISSIONS___
                   {
                     "type": 1,
                     "string": "amzn.q"
+                  },
+                  {
+                    "type": 8,
+                    "boolean": true
+                  },
+                  {
+                    "type": 8,
+                    "boolean": true
+                  },
+                  {
+                    "type": 8,
+                    "boolean": true
+                  }
+                ]
+              },
+              {
+                "type": 3,
+                "mapKey": [
+                  {
+                    "type": 1,
+                    "string": "key"
+                  },
+                  {
+                    "type": 1,
+                    "string": "read"
+                  },
+                  {
+                    "type": 1,
+                    "string": "write"
+                  },
+                  {
+                    "type": 1,
+                    "string": "execute"
+                  }
+                ],
+                "mapValue": [
+                  {
+                    "type": 1,
+                    "string": "amznConsent"
                   },
                   {
                     "type": 8,
@@ -1510,6 +1580,102 @@ scenarios:
     assertThat(amznCalls.length).isEqualTo(0);
     assertApi('gtmOnSuccess').wasCalled();
     assertApi('gtmOnFailure').wasNotCalled();
+- name: Test Amazon Consent injects consent library when countryCode is set
+  code: |
+    mockData.enabled = true;
+    mockData.countryCode = 'US';
+    mockData.amznAdStorage = 'GRANTED';
+    mockData.amznUserData = 'GRANTED';
+
+    runCode(mockData);
+
+    assertApi('injectScript').wasCalled();
+    assertApi('gtmOnSuccess').wasCalled();
+- name: Test Amazon Consent calls amznConsent with GRANTED values
+  code: |
+    let amznConsentArgs = null;
+    mock('callInWindow', (fn, args) => {
+      if (fn === 'amznConsent') amznConsentArgs = args;
+    });
+
+    mockData.enabled = true;
+    mockData.countryCode = 'US';
+    mockData.amznAdStorage = 'GRANTED';
+    mockData.amznUserData = 'GRANTED';
+
+    runCode(mockData);
+
+    assertThat(amznConsentArgs).isNotNull();
+    assertThat(amznConsentArgs.countryCode).isEqualTo('US');
+    assertThat(amznConsentArgs.enableAdStorage).isEqualTo(true);
+    assertThat(amznConsentArgs.enableUserData).isEqualTo(true);
+    assertApi('gtmOnSuccess').wasCalled();
+- name: Test Amazon Consent calls amznConsent with DENIED values
+  code: |
+    let amznConsentArgs = null;
+    mock('callInWindow', (fn, args) => {
+      if (fn === 'amznConsent') amznConsentArgs = args;
+    });
+
+    mockData.enabled = true;
+    mockData.countryCode = 'DE';
+    mockData.amznAdStorage = 'DENIED';
+    mockData.amznUserData = 'DENIED';
+
+    runCode(mockData);
+
+    assertThat(amznConsentArgs).isNotNull();
+    assertThat(amznConsentArgs.countryCode).isEqualTo('DE');
+    assertThat(amznConsentArgs.enableAdStorage).isEqualTo(false);
+    assertThat(amznConsentArgs.enableUserData).isEqualTo(false);
+    assertApi('gtmOnSuccess').wasCalled();
+- name: Test Amazon Consent accepts true/false string values
+  code: |
+    let amznConsentArgs = null;
+    mock('callInWindow', (fn, args) => {
+      if (fn === 'amznConsent') amznConsentArgs = args;
+    });
+
+    mockData.enabled = true;
+    mockData.countryCode = 'JP';
+    mockData.amznAdStorage = 'true';
+    mockData.amznUserData = 'false';
+
+    runCode(mockData);
+
+    assertThat(amznConsentArgs).isNotNull();
+    assertThat(amznConsentArgs.enableAdStorage).isEqualTo(true);
+    assertThat(amznConsentArgs.enableUserData).isEqualTo(false);
+    assertApi('gtmOnSuccess').wasCalled();
+- name: Test Amazon Consent includes GPP string when provided
+  code: |
+    let amznConsentArgs = null;
+    mock('callInWindow', (fn, args) => {
+      if (fn === 'amznConsent') amznConsentArgs = args;
+    });
+
+    mockData.enabled = true;
+    mockData.countryCode = 'GB';
+    mockData.amznAdStorage = 'DENIED';
+    mockData.amznUserData = 'DENIED';
+    mockData.gpp = 'DBABLA~BVVqAAAACCA.QA';
+
+    runCode(mockData);
+
+    assertThat(amznConsentArgs).isNotNull();
+    assertThat(amznConsentArgs.gpp).isEqualTo('DBABLA~BVVqAAAACCA.QA');
+    assertApi('gtmOnSuccess').wasCalled();
+- name: Test Amazon Consent skipped when enabled is false
+  code: |
+    mockData.enabled = false;
+    mockData.countryCode = 'US';
+    mockData.amznAdStorage = 'GRANTED';
+    mockData.amznUserData = 'GRANTED';
+
+    runCode(mockData);
+
+    assertApi('callInWindow').wasNotCalled();
+    assertApi('gtmOnSuccess').wasCalled();
 setup: |-
   const log = require('logToConsole');
 

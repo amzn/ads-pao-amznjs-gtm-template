@@ -36,7 +36,20 @@ Enable Advanced Matching to pass hashed user data (email, phone number, or Match
 If operating in GDPR regions, enable TCFv2 to pass consent signals (GDPR applicability, consent string, personal data flag) with your events.
 
 ### Amazon Consent
-For Amazon's proprietary consent format, configure geo attributes (IP address, country code), Amazon ad storage/user data consent values, and GPP string.
+Enable this section to pass Amazon Consent Signal (ACS) data with your events. When enabled, the template injects `amzn-consent.js` and calls `window.amznConsent()` with your configured values.
+
+**Fields:**
+- **Country Code** (required) — ISO 3166 two-letter code indicating the legal origin of the request (e.g., US, GB, DE, JP)
+- **IP Address** — optional, the user's IP address for geo determination
+- **Amazon Ad Storage** — consent for ad storage. Accepted values: `GRANTED`, `DENIED`, `true`, `false`
+- **Amazon User Data** — consent for user data processing. Accepted values: `GRANTED`, `DENIED`, `true`, `false`
+- **Global Privacy Platform string** — optional IAB GPP consent string from your CMP
+
+**Notes:**
+- Country code is always required for Amazon to process your data
+- For EEA traffic, you must provide at least one consent signal (TCF, GPP, or ACS)
+- If multiple signals are provided, Amazon uses TCF and ignores ACS
+- The consent library defaults all signals to DENIED until explicitly set
 
 ## Consent Mode
 
