@@ -1,7 +1,7 @@
 homepage: "https://advertising.amazon.com"
 documentation: "https://advertising.amazon.com/dsp/help#/"
 versions:
-  - sha: TBD
+  - sha: b331cc2b8fa8f4fa4de15898c9565c7b591026ba
     changeNotes: v3.6 - Add GTM Consent Mode, Amazon Consent Signal (ACS), expanded attributes, and tests
   - sha: f37eb4df4e9ac49157b81bf8e15b1b16d792b3a4
     changeNotes: Update GTM template to ignore events sent by gtm-msr
