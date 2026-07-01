@@ -24,7 +24,7 @@ ___INFO___
     "ATTRIBUTION",
     "CONVERSIONS"
   ],
-  "description": "Amazon Advertising Tag template - version 3.6",
+  "description": "Amazon Advertising Tag template - version 4.0",
   "containerContexts": [
     "WEB"
   ]
@@ -63,8 +63,27 @@ ___TEMPLATE_PARAMETERS___
   },
   {
     "type": "RADIO",
+    "name": "configMode",
+    "displayName": "Configuration Mode",
+    "radioItems": [
+      {
+        "value": "manual",
+        "displayValue": "Manual — configure all fields manually using dataLayer variables"
+      },
+      {
+        "value": "automatic",
+        "displayValue": "Automatic (GA4) — read event data from the dataLayer",
+        "help": "Reads event attributes (value, currency, brand, category, productId, user data) from the GA4 ecommerce eventModel in the dataLayer. Manually set attributes will override auto-populated values. <a href=\"https://developers.google.com/analytics/devguides/collection/ga4/ecommerce\" target=\"_blank\">See GA4 ecommerce documentation</a>."
+      }
+    ],
+    "simpleValueType": true,
+    "defaultValue": "manual"
+  },
+  {
+    "type": "RADIO",
     "name": "eventName",
     "displayName": "Event Name",
+    "help": "Select Standard for Amazon's standard event names or Custom to define your own.",
     "radioItems": [
       {
         "value": "standard",
@@ -134,7 +153,7 @@ ___TEMPLATE_PARAMETERS___
             "name": "customEventName",
             "displayName": "",
             "simpleValueType": true,
-            "defaultValue": "default"
+            "defaultValue": ""
           }
         ]
       }
@@ -159,10 +178,18 @@ ___TEMPLATE_PARAMETERS___
     "defaultValue": "NA"
   },
   {
+    "type": "TEXT",
+    "name": "clientDedupeId",
+    "displayName": "Client Deduplication ID",
+    "simpleValueType": true,
+    "help": "A unique identifier for this event used to prevent duplicate conversions. Use a transaction ID, order ID, or other unique value. Required when sending the same event from both client-side and server-side. <a href=\"https://advertising.amazon.com/help/GP5ZEF499J3K976K\" target=\"_blank\">Learn more</a>."
+  },
+  {
     "type": "CHECKBOX",
     "name": "advancedMatching",
     "checkboxText": "Advanced Matching for User Data",
-    "simpleValueType": true
+    "simpleValueType": true,
+    "help": "Enables hashed user data (email, phone) to be sent for improved attribution."
   },
   {
     "type": "GROUP",
@@ -474,7 +501,8 @@ ___TEMPLATE_PARAMETERS___
         "name": "includeTcf",
         "checkboxText": "Include TCFv2",
         "simpleValueType": true,
-        "defaultValue": false
+        "defaultValue": false,
+        "help": "Enable to pass IAB Transparency & Consent Framework signals for GDPR compliance in EEA regions."
       },
       {
         "type": "SELECT",
@@ -567,7 +595,8 @@ ___TEMPLATE_PARAMETERS___
         "name": "countryCode",
         "displayName": "Country Code (ISO 3166, e.g. US, GB, DE, JP)",
         "simpleValueType": true,
-        "valueHint": "US"
+        "valueHint": "US",
+        "help": "Required. The ISO 3166 two-letter code indicating where this user is located (e.g., US, GB, DE)."
       },
       {
         "type": "TEXT",
@@ -604,7 +633,7 @@ ___TEMPLATE_PARAMETERS___
 
 ___SANDBOXED_JS_FOR_WEB_TEMPLATE___
 
-const version = "3.6";
+const version = "4.0";
 
 const makeTableMap = require('makeTableMap');
 const createArgumentsQueue = require('createArgumentsQueue');
@@ -616,6 +645,7 @@ const makeInteger = require('makeInteger');
 const getUrl = require('getUrl');
 const isConsentGranted = require('isConsentGranted');
 const callInWindow = require('callInWindow');
+const copyFromDataLayer = require('copyFromDataLayer');
 
 const eventSourceUrl = getUrl();
 
@@ -680,6 +710,37 @@ if (eventName === "Off-AmazonPurchases") {
 const customAttributes = data.customAttributes ? makeTableMap(data.customAttributes, 'Attribute', 'value') : {};
 const finalAttributes = mergeObj(attributes, customAttributes);
 finalAttributes.gtmVersion = version;
+
+// Deduplication via clientDedupeId
+if (data.clientDedupeId) {
+  finalAttributes.clientDedupeId = data.clientDedupeId;
+}
+
+// GA4 Ecommerce auto-read from dataLayer
+if (data.configMode === 'automatic') {
+  const eventModel = copyFromDataLayer('eventModel', 1);
+
+  if (eventModel) {
+    if (eventModel.value && !finalAttributes.value)
+      finalAttributes.value = eventModel.value;
+    if (eventModel.currency && !finalAttributes.currencyCode)
+      finalAttributes.currencyCode = eventModel.currency;
+    if (eventModel.transaction_id && !finalAttributes.clientDedupeId)
+      finalAttributes.clientDedupeId = eventModel.transaction_id;
+
+    if (eventModel.items && eventModel.items[0]) {
+      const item = eventModel.items[0];
+      if (item.item_brand && !finalAttributes.brand)
+        finalAttributes.brand = item.item_brand;
+      if (item.item_category && !finalAttributes.category)
+        finalAttributes.category = item.item_category;
+      if (item.item_id && !finalAttributes.productId)
+        finalAttributes.productId = item.item_id;
+      if (item.quantity && !finalAttributes.unitsSold)
+        finalAttributes.unitsSold = item.quantity;
+    }
+  }
+}
 
 for (const key in finalAttributes) {
   if (!key) {
@@ -753,7 +814,23 @@ if (data.advancedMatchingList) {
   if (ttl) {
     tokenConfig.ttl = ttl;
   }
-  log("Amazon Ad Tag: Advanced Matching enabled -",
+}
+
+// GA4 user_data auto-read (if no manual values are entered for email/phone)
+if (data.configMode === 'automatic') {
+  const eventModel = copyFromDataLayer('eventModel', 1);
+  if (eventModel && eventModel.user_data) {
+    if (eventModel.user_data.email_address && tokenConfig.email === '') {
+      tokenConfig.email = eventModel.user_data.email_address;
+    }
+    if (eventModel.user_data.phone_number && tokenConfig.phonenumber === '') {
+      tokenConfig.phonenumber = eventModel.user_data.phone_number;
+    }
+  }
+}
+
+if (tokenConfig.email || tokenConfig.phonenumber) {
+  log("Amazon Ad Tag: Advanced Matching -",
     "email:", tokenConfig.email ? "set" : "not set",
     "phone:", tokenConfig.phonenumber ? "set" : "not set");
 }
@@ -1043,6 +1120,39 @@ ___WEB_PERMISSIONS___
           "value": {
             "type": 1,
             "string": "any"
+          }
+        }
+      ]
+    },
+    "clientAnnotations": {
+      "isEditedByUser": true
+    },
+    "isRequired": true
+  },
+  {
+    "instance": {
+      "key": {
+        "publicId": "read_data_layer",
+        "versionId": "1"
+      },
+      "param": [
+        {
+          "key": "allowedKeys",
+          "value": {
+            "type": 1,
+            "string": "specific"
+          }
+        },
+        {
+          "key": "keyPatterns",
+          "value": {
+            "type": 2,
+            "listItem": [
+              {
+                "type": 1,
+                "string": "eventModel"
+              }
+            ]
           }
         }
       ]
@@ -1680,13 +1790,66 @@ scenarios:
 
     assertApi('callInWindow').wasNotCalled();
     assertApi('gtmOnSuccess').wasCalled();
+- name: GA4 auto-read - populates attributes from eventModel
+  code: |
+    mockData.configMode = 'automatic';
+
+    mock('copyFromDataLayer', (key, version) => {
+      if (key === 'eventModel') return {
+        value: 49.99,
+        currency: 'USD',
+        transaction_id: 'ORDER-123',
+        items: [{ item_brand: 'TestBrand', item_category: 'Electronics', item_id: 'SKU-001', quantity: 2 }]
+      };
+    });
+
+    runCode(mockData);
+
+    assertThat(amznCalls.length).isEqualTo(4);
+    const attrs = amznCalls[3][2];
+    assertThat(attrs.value).isEqualTo(49.99);
+    assertThat(attrs.currencyCode).isEqualTo('USD');
+    assertThat(attrs.clientDedupeId).isEqualTo('ORDER-123');
+    assertThat(attrs.brand).isEqualTo('TestBrand');
+    assertThat(attrs.category).isEqualTo('Electronics');
+    assertThat(attrs.productId).isEqualTo('SKU-001');
+    assertApi('gtmOnSuccess').wasCalled();
+- name: GA4 auto-read - manual attributes override auto-read
+  code: |
+    mockData.configMode = 'automatic';
+    mockData.defaultAttributes = [{'Attribute': 'value', 'value': '99.99'}];
+
+    mock('copyFromDataLayer', (key, version) => {
+      if (key === 'eventModel') return {
+        value: 49.99,
+        currency: 'USD'
+      };
+    });
+
+    runCode(mockData);
+
+    assertThat(amznCalls.length).isEqualTo(4);
+    const attrs = amznCalls[3][2];
+    assertThat(attrs.value).isEqualTo('99.99');
+    assertThat(attrs.currencyCode).isEqualTo('USD');
+    assertApi('gtmOnSuccess').wasCalled();
+- name: clientDedupeId - field value passed in trackEvent
+  code: |
+    mockData.clientDedupeId = 'DEDUP-456';
+
+    runCode(mockData);
+
+    assertThat(amznCalls.length).isEqualTo(4);
+    const attrs = amznCalls[3][2];
+    assertThat(attrs.clientDedupeId).isEqualTo('DEDUP-456');
+    assertApi('gtmOnSuccess').wasCalled();
 setup: |-
   const log = require('logToConsole');
 
   const tag1 = 'tagId1';
   const eventName = 'PageView';
   const region = 'NA';
-  const version = '3.6';
+  const version = '4.0';
   const exampleTCFv2ConsentString = 'COw4XqLOw4XqLAAAAAENAXCAAAAAAAAAAAAAAAAAAAAA.IFukWSQgAIQwgI0QEByFAAAAeIAACAIgSAAQAIAgEQACEABAAAgAQFAEAIAAAGBAAgAAAAQAIFAAMCQAAgAAQiRAEQAAAAANAAIAAggAIYQFAAARmggBC3ZCYzU2yIA.QFukWSQgAIQwgI0QEByFAAAAeIAACAIgSAAQAIAgEQACEABAAAgAQFAEAIAAAGBAAgAAAAQAIFAAMCQAAgAAQiRAEQAAAAANAAIAAggAIYQFAAARmggBC3ZCYzU2yIA.YAAAAAAAAAAAAAAAAAA'; // https://github.com/InteractiveAdvertisingBureau/GDPR-Transparency-and-Consent-Framework/blob/master/TCFv2/IAB%20Tech%20Lab%20-%20Consent%20string%20and%20vendor%20list%20formats%20v2.md#tc-string-format
 
   const mockData = {
