@@ -8,10 +8,15 @@ This repository hosts the Google Tag Manager (GTM) custom tag template for Amazo
 2. Search for "Amazon Advertising Tag" and add it to your workspace
 3. Create a new tag using the template
 4. Enter your Tag ID(s) from Amazon DSP
-5. Select your event name and region
+5. Choose your Configuration Mode, Event Name, and Region
 6. Configure your trigger and publish
 
 ## Configuration
+
+### Configuration Mode
+
+- **Manual** — configure all fields using [GTM dataLayer variables](https://support.google.com/tagmanager/answer/7683362?hl=en#data_layer)
+- **Automatic (GA4)** — automatically reads event attributes from the [GA4 ecommerce](https://developers.google.com/analytics/devguides/collection/ga4/ecommerce) `eventModel` in the dataLayer (value, currency, brand, category, productId, user data). Manually set attributes override auto-populated values.
 
 ### Tag IDs
 Add a Tag ID provided by Amazon DSP. These identify your advertiser account for conversion tracking.
@@ -23,6 +28,9 @@ Choose a **Standard** event (PageView, AddToShoppingCart, Checkout, Signup, Lead
 Select the region that matches your Amazon DSP account:
 - **NA** — North America, South America, Japan, and Australia
 - **EU** — Europe
+
+### Client Deduplication ID
+A unique identifier (e.g., transaction ID, order ID) used to prevent duplicate conversions when the same event is sent from both client-side and server-side.
 
 ### Advanced Matching
 Enable Advanced Matching to pass hashed user data (email, phone number, or Match ID) for improved attribution accuracy.
@@ -65,7 +73,7 @@ This template integrates with [GTM's native Consent Mode](https://support.google
 
 ## Version
 
-Current version: **3.6**
+Current version: **4.0**
 
 ## Security
 
