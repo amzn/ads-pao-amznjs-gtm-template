@@ -73,7 +73,7 @@ ___TEMPLATE_PARAMETERS___
       {
         "value": "automatic",
         "displayValue": "Automatic (GA4) — read event data from the dataLayer",
-        "help": "Reads event name and attributes from the GA4 eventModel in the dataLayer. Manually set attributes will override auto-populated values.\u003cbr/\u003e\u003cbr/\u003eExpected format:\u003cbr/\u003e\u003cbr/\u003egtag('event', 'purchase', {\u003cbr/\u003e\u0026nbsp;\u0026nbsp;value: 49.99,\u003cbr/\u003e\u0026nbsp;\u0026nbsp;currency: 'USD',\u003cbr/\u003e\u0026nbsp;\u0026nbsp;transaction_id: 'ORDER-123',\u003cbr/\u003e\u0026nbsp;\u0026nbsp;items: [{\u003cbr/\u003e\u0026nbsp;\u0026nbsp;\u0026nbsp;\u0026nbsp;item_id: 'SKU-001',\u003cbr/\u003e\u0026nbsp;\u0026nbsp;\u0026nbsp;\u0026nbsp;item_brand: 'Brand',\u003cbr/\u003e\u0026nbsp;\u0026nbsp;\u0026nbsp;\u0026nbsp;item_category: 'Category',\u003cbr/\u003e\u0026nbsp;\u0026nbsp;\u0026nbsp;\u0026nbsp;quantity: 1\u003cbr/\u003e\u0026nbsp;\u0026nbsp;}],\u003cbr/\u003e\u0026nbsp;\u0026nbsp;user_data: {\u003cbr/\u003e\u0026nbsp;\u0026nbsp;\u0026nbsp;\u0026nbsp;email_address: 'user@example.com',\u003cbr/\u003e\u0026nbsp;\u0026nbsp;\u0026nbsp;\u0026nbsp;phone_number: '+15551234567'\u003cbr/\u003e\u0026nbsp;\u0026nbsp;}\u003cbr/\u003e});\u003cbr/\u003e\u003cbr/\u003e\u003ca href=\"https://developers.google.com/analytics/devguides/collection/ga4/ecommerce\" target=\"_blank\"\u003eSee GA4 ecommerce documentation\u003c/a\u003e."
+        "help": "Reads event name and attributes from the GA4 ecommerce dataLayer. Supports both the gtag() format and the GTM-native dataLayer.push({ ecommerce: {...} }) format. Manually set attributes override auto-populated values.\u003cbr/\u003e\u003cbr/\u003eExpected format:\u003cbr/\u003e\u003cbr/\u003egtag('event', 'purchase', {\u003cbr/\u003e\u0026nbsp;\u0026nbsp;value: 49.99,\u003cbr/\u003e\u0026nbsp;\u0026nbsp;currency: 'USD',\u003cbr/\u003e\u0026nbsp;\u0026nbsp;transaction_id: 'ORDER-123',\u003cbr/\u003e\u0026nbsp;\u0026nbsp;items: [{\u003cbr/\u003e\u0026nbsp;\u0026nbsp;\u0026nbsp;\u0026nbsp;item_id: 'SKU-001',\u003cbr/\u003e\u0026nbsp;\u0026nbsp;\u0026nbsp;\u0026nbsp;item_brand: 'Brand',\u003cbr/\u003e\u0026nbsp;\u0026nbsp;\u0026nbsp;\u0026nbsp;item_category: 'Category',\u003cbr/\u003e\u0026nbsp;\u0026nbsp;\u0026nbsp;\u0026nbsp;quantity: 1\u003cbr/\u003e\u0026nbsp;\u0026nbsp;}],\u003cbr/\u003e\u0026nbsp;\u0026nbsp;user_data: {\u003cbr/\u003e\u0026nbsp;\u0026nbsp;\u0026nbsp;\u0026nbsp;email_address: 'user@example.com',\u003cbr/\u003e\u0026nbsp;\u0026nbsp;\u0026nbsp;\u0026nbsp;phone_number: '+15551234567'\u003cbr/\u003e\u0026nbsp;\u0026nbsp;}\u003cbr/\u003e});\u003cbr/\u003e\u003cbr/\u003e\u003ca href=\"https://developers.google.com/analytics/devguides/collection/ga4/ecommerce\" target=\"_blank\"\u003eSee GA4 ecommerce documentation\u003c/a\u003e."
       }
     ],
     "simpleValueType": true,
@@ -766,8 +766,24 @@ if (data.clientDedupeId) {
   finalAttributes.clientDedupeId = data.clientDedupeId;
 }
 
-// GA4 Ecommerce auto-read from dataLayer
-const ga4EventModel = data.configMode === 'automatic' ? copyFromDataLayer('eventModel', 1) : null;
+// GA4 Ecommerce auto-read from dataLayer.
+// GTM exposes ecommerce data under different top-level keys depending on how the
+// customer's site pushes it:
+//   - gtag('event', 'purchase', {...})            -> flattened under 'eventModel'
+//   - dataLayer.push({ event, ecommerce: {...} }) -> kept under top-level 'ecommerce'
+// Read both and coalesce field-by-field so we don't lose event data in automatic mode.
+// 'eventModel' takes precedence when both are present to preserve existing behavior.
+let ga4EventModel = null;
+if (data.configMode === 'automatic') {
+  const dlEventModel = copyFromDataLayer('eventModel', 1);
+  const dlEcommerce = copyFromDataLayer('ecommerce', 1);
+
+  if (dlEventModel && dlEcommerce) {
+    ga4EventModel = mergeObj(dlEcommerce, dlEventModel);
+  } else {
+    ga4EventModel = dlEventModel || dlEcommerce;
+  }
+}
 
 if (ga4EventModel) {
   if (ga4EventModel.value && !finalAttributes.value)
@@ -1208,6 +1224,10 @@ ___WEB_PERMISSIONS___
               {
                 "type": 1,
                 "string": "eventModel"
+              },
+              {
+                "type": 1,
+                "string": "ecommerce"
               },
               {
                 "type": 1,
@@ -2006,6 +2026,50 @@ scenarios:
     const attrs = amznCalls[3][2];
     assertThat(attrs.clientDedupeId).isEqualTo('DEDUP-456');
     assertApi('gtmOnSuccess').wasCalled();
+- name: GA4 auto-read - reads ecommerce top-level key from dataLayer push pattern
+  code: |
+    mockData.configMode = 'automatic';
+
+    mock('copyFromDataLayer', (key, version) => {
+      if (key === 'ecommerce') return {
+        value: 49.99,
+        currency: 'USD',
+        transaction_id: 'ORDER-123',
+        items: [{ item_brand: 'TestBrand', item_category: 'Electronics', item_id: 'SKU-001', quantity: 2 }]
+      };
+      if (key === 'event') return 'add_to_cart';
+    });
+
+    runCode(mockData);
+
+    assertThat(amznCalls.length).isEqualTo(4);
+    assertThat(amznCalls[3][1]).isEqualTo('add_to_cart');
+    const attrs = amznCalls[3][2];
+    assertThat(attrs.value).isEqualTo(49.99);
+    assertThat(attrs.currencyCode).isEqualTo('USD');
+    assertThat(attrs.clientDedupeId).isEqualTo('ORDER-123');
+    assertThat(attrs.brand).isEqualTo('TestBrand');
+    assertThat(attrs.category).isEqualTo('Electronics');
+    assertThat(attrs.productId).isEqualTo('SKU-001');
+    assertThat(attrs.unitsSold).isEqualTo(2);
+    assertApi('gtmOnSuccess').wasCalled();
+- name: GA4 auto-read - eventModel takes precedence over ecommerce on collision
+  code: |
+    mockData.configMode = 'automatic';
+
+    mock('copyFromDataLayer', (key, version) => {
+      if (key === 'eventModel') return { value: 10.00, currency: 'USD' };
+      if (key === 'ecommerce') return { value: 99.99, currency: 'EUR', transaction_id: 'ECOM-TXN' };
+      if (key === 'event') return 'purchase';
+    });
+
+    runCode(mockData);
+
+    const attrs = amznCalls[3][2];
+    assertThat(attrs.value).isEqualTo(10.00);
+    assertThat(attrs.currencyCode).isEqualTo('USD');
+    assertThat(attrs.clientDedupeId).isEqualTo('ECOM-TXN');
+    assertApi('gtmOnSuccess').wasCalled();
 setup: |-
   const log = require('logToConsole');
 
@@ -2049,4 +2113,3 @@ setup: |-
 ___NOTES___
 
 Created on 3/26/2020, 3:08:52 PM
-Updated on 7/24/2026

@@ -16,7 +16,7 @@ This repository hosts the Google Tag Manager (GTM) custom tag template for Amazo
 ### Configuration Mode
 
 - **Manual** — configure all fields using [GTM dataLayer variables](https://support.google.com/tagmanager/answer/7683362?hl=en#data_layer)
-- **Automatic (GA4)** — automatically reads event name and attributes (value, currency, brand, category, productId, user data) from the [GA4 ecommerce](https://developers.google.com/analytics/devguides/collection/ga4/ecommerce) `eventModel` in the dataLayer. See the [Attributes](#attributes) section for details on manual overrides.
+- **Automatic (GA4)** — automatically reads event name and attributes (value, currency, brand, category, productId, user data) from the [GA4 ecommerce](https://developers.google.com/analytics/devguides/collection/ga4/ecommerce) dataLayer. Supports both the `gtag()` format and the GTM-native `dataLayer.push({ ecommerce: {...} })` format. See the [Attributes](#attributes) section for details on manual overrides.
 
 **GA4 → Amazon field mapping:**
 
@@ -33,8 +33,9 @@ This repository hosts the Google Tag Manager (GTM) custom tag template for Amazo
 | `user_data.email_address` | `email` (Advanced Matching) |
 | `user_data.phone_number` | `phone` (Advanced Matching) |
 
-Expected dataLayer format:
+Expected dataLayer format. Both the `gtag()` format and the GTM-native `dataLayer.push({ ecommerce: {...} })` format are supported:
 ```js
+// gtag.js format
 gtag('event', '<EVENT_NAME>', {
   value: '<VALUE>',
   currency: '<CURRENCY_CODE>',
@@ -48,6 +49,23 @@ gtag('event', '<EVENT_NAME>', {
   user_data: {
     email_address: '<EMAIL_ADDRESS>',
     phone_number: '<PHONE_NUMBER>'
+  }
+});
+
+// GTM dataLayer.push format
+dataLayer.push({ ecommerce: null });
+dataLayer.push({
+  event: '<EVENT_NAME>',
+  ecommerce: {
+    value: '<VALUE>',
+    currency: '<CURRENCY_CODE>',
+    transaction_id: '<TRANSACTION_ID>',
+    items: [{
+      item_id: '<ITEM_ID>',
+      item_brand: '<BRAND>',
+      item_category: '<CATEGORY>',
+      quantity: '<QUANTITY>'
+    }]
   }
 });
 ```
