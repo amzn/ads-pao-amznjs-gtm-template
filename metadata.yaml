@@ -1,6 +1,8 @@
 homepage: "https://advertising.amazon.com"
 documentation: "https://advertising.amazon.com/dsp/help#/"
 versions:
+  - sha: 6b49a92b2570ec24d0578939728afad7131c4d71
+    changeNotes: v4.0 plus add GA4 ecommerce top-level key support to auto-read logic (dataLayer.push ecommerce format)
   - sha: 94e6f66b4e229d6f9feeee4e0de46f22be9e290d
     changeNotes: v4.0 - Add GA4 ecommerce auto-read, client deduplication ID, and configuration mode selector
   - sha: b331cc2b8fa8f4fa4de15898c9565c7b591026ba
