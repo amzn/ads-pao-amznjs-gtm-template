@@ -125,9 +125,17 @@ This template integrates with [GTM's native Consent Mode](https://support.google
 
 **No additional setup required.** If your GTM container already has a Consent Management Platform (CMP) configured, the Amazon Ad Tag will automatically respect those consent signals.
 
+## First-party session cookie
+
+To opt out of the `aatSession` cookie, expand **First-party session cookie** and check **Disable first-party aatSession cookie**. The template sends `amzn('disableAATSessionCookie', true)` before its other commands and event, including when commands are queued before `amzn.js` loads.
+
+With opt-out enabled, `amzn.js` deletes an existing `aatSession` cookie, stops creating or refreshing it, and omits the session identifier from events. Event delivery continues.
+
+The checkbox is unchecked by default, so existing tags continue to follow the normal region and consent rules. An unchecked tag does not send a command to override another tag's opt-out on the same page.
+
 ## Version
 
-Current version: **4.0**
+Current version: **4.1**
 
 ## Security
 
