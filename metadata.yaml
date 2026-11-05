@@ -1,6 +1,8 @@
 homepage: "https://advertising.amazon.com"
 documentation: "https://advertising.amazon.com/dsp/help#/"
 versions:
+  - sha: 0dd49f1c95ab76deb3e0e67338750eb6b90051ae
+    changeNotes: v4.1 - Add aatSession cookie opt-out
   - sha: 6b49a92b2570ec24d0578939728afad7131c4d71
     changeNotes: v4.0 plus add GA4 ecommerce top-level key support to auto-read logic (dataLayer.push ecommerce format)
   - sha: 94e6f66b4e229d6f9feeee4e0de46f22be9e290d

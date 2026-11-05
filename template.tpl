@@ -24,7 +24,7 @@ ___INFO___
     "ATTRIBUTION",
     "CONVERSIONS"
   ],
-  "description": "Amazon Advertising Tag template - version 4.0",
+  "description": "Amazon Advertising Tag template - version 4.1",
   "containerContexts": [
     "WEB"
   ]
@@ -660,13 +660,29 @@ ___TEMPLATE_PARAMETERS___
         "simpleValueType": true
       }
     ]
+  },
+  {
+    "type": "GROUP",
+    "name": "firstPartySessionCookie",
+    "displayName": "First-party session cookie",
+    "groupStyle": "ZIPPY_CLOSED",
+    "subParams": [
+      {
+        "type": "CHECKBOX",
+        "name": "disableAATSessionCookie",
+        "checkboxText": "Disable first-party aatSession cookie",
+        "simpleValueType": true,
+        "defaultValue": false,
+        "help": "Turns off and deletes the aatSession cookie on this page."
+      }
+    ]
   }
 ]
 
 
 ___SANDBOXED_JS_FOR_WEB_TEMPLATE___
 
-const version = "4.0";
+const version = "4.1";
 
 const makeTableMap = require('makeTableMap');
 const createArgumentsQueue = require('createArgumentsQueue');
@@ -923,6 +939,11 @@ const trackEvents = () => {
   const amzn = getAmzn();
   if (!amzn) {
      return fail("Amazon Ad Tag not defined in browser window");
+  }
+
+  // Send the opt-out first so it applies before this tag's other commands and its event.
+  if (data.disableAATSessionCookie) {
+    amzn('disableAATSessionCookie', true);
   }
 
   if ((data.advancedMatchingList || data.configMode === 'automatic') && ((tokenConfig.email !== '') || (tokenConfig.phonenumber !== ''))) {
@@ -2070,13 +2091,46 @@ scenarios:
     assertThat(attrs.currencyCode).isEqualTo('USD');
     assertThat(attrs.clientDedupeId).isEqualTo('ECOM-TXN');
     assertApi('gtmOnSuccess').wasCalled();
+- name: aatSession opt-out - checked sends disableAATSessionCookie first
+  code: |
+    mockData.disableAATSessionCookie = true;
+
+    runCode(mockData);
+
+    assertThat(amznCalls.length).isEqualTo(5);
+    assertThat(amznCalls[0]).isEqualTo(['disableAATSessionCookie', true]);
+    assertThat(amznCalls[1]).isEqualTo(['setRegion', region]);
+    assertThat(amznCalls[4]).isEqualTo(['trackEvent', eventName, { gtmVersion: version }]);
+    assertApi('gtmOnSuccess').wasCalled();
+- name: aatSession opt-out - checked queues disableAATSessionCookie first
+  code: |
+    const Calls = { "amznq" : []};
+
+    mock('copyFromWindow', key => {
+      if (key === 'amzn') return undefined;
+    });
+
+    const amznq = () => {
+       Calls.amznq.push(arguments[0]);
+    };
+
+    mock('createArgumentsQueue', (key, q) => amznq);
+
+    mockData.disableAATSessionCookie = true;
+
+    runCode(mockData);
+
+    assertThat(Calls.amznq.length).isEqualTo(5);
+    assertThat(Calls.amznq[0]).isEqualTo(['disableAATSessionCookie', true, undefined, undefined]);
+    assertThat(Calls.amznq[4]).isEqualTo(['trackEvent', eventName, { 'gtmVersion': version }, undefined]);
+    assertApi('gtmOnSuccess').wasCalled();
 setup: |-
   const log = require('logToConsole');
 
   const tag1 = 'tagId1';
   const eventName = 'PageView';
   const region = 'NA';
-  const version = '4.0';
+  const version = '4.1';
   const exampleTCFv2ConsentString = 'COw4XqLOw4XqLAAAAAENAXCAAAAAAAAAAAAAAAAAAAAA.IFukWSQgAIQwgI0QEByFAAAAeIAACAIgSAAQAIAgEQACEABAAAgAQFAEAIAAAGBAAgAAAAQAIFAAMCQAAgAAQiRAEQAAAAANAAIAAggAIYQFAAARmggBC3ZCYzU2yIA.QFukWSQgAIQwgI0QEByFAAAAeIAACAIgSAAQAIAgEQACEABAAAgAQFAEAIAAAGBAAgAAAAQAIFAAMCQAAgAAQiRAEQAAAAANAAIAAggAIYQFAAARmggBC3ZCYzU2yIA.YAAAAAAAAAAAAAAAAAA'; // https://github.com/InteractiveAdvertisingBureau/GDPR-Transparency-and-Consent-Framework/blob/master/TCFv2/IAB%20Tech%20Lab%20-%20Consent%20string%20and%20vendor%20list%20formats%20v2.md#tc-string-format
 
   const mockData = {
